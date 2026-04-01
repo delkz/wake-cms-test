@@ -1,0 +1,51 @@
+import { cmsApi } from "@/app/lib/cms-api"
+import { Button } from "@/app/components/ui/button";
+import Link from "next/link";
+
+
+export default async function Hotsite({
+  params
+}: {
+  params: Promise<{ hotsiteId: string }>
+}) {
+  const { hotsiteId } = await params;
+  const data = await cmsApi.getHotsiteById(hotsiteId)
+
+  console.log({ data }) // Log para verificar os dados retornados
+
+  return (
+    <main className="page-wrap px-4 py-12">
+      <h1 className="display-title mb-3 text-4xl font-bold sm:text-5xl">
+        Detalhes do Hotsite <span className="text-primary">{data.nome}</span>
+      </h1>
+      <hr />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div>
+          <h2>Conteudos</h2>
+          <div className="rounded-lg border border-(--chip-line) p-4 mb-4">
+            {data.conteudos.map((content) => (
+              <div key={content.contentId} className="mb-4">
+                <h3 className="text-xl font-semibold mb-1">{content.title}</h3>
+                <Button><Link href={`/cms/content/edit/${content.contentId}?hotsiteId=${data.hotsiteId}`}>Editar</Link></Button>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h2>Banners</h2>
+          <div className="rounded-lg border border-(--chip-line) p-4 mb-4">
+            {data.banners.map((banner) => (
+              <div key={banner.bannerId} className="mb-4">
+                <h3 className="text-xl font-semibold mb-1">{banner.bannerName}</h3>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
+
+    </main>
+  )
+
+}
