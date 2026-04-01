@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const REST_BASE_URL = process.env.WAKE_API_URL ?? ''
-const API_TOKEN = process.env.WAKE_API_TOKEN ?? ''
-
 export async function POST(request: NextRequest) {
   try {
+    const REST_BASE_URL = process.env.WAKE_API_URL ?? ''
+    const API_TOKEN = process.env.WAKE_API_TOKEN ?? ''
+
+    console.log('REST DEBUG:', {
+      apiUrl: REST_BASE_URL ? '✓ Configurada' : '✗ Vazia',
+      token: API_TOKEN ? '✓ Configurada' : '✗ Vazia',
+    })
+
     if (!REST_BASE_URL) {
       return NextResponse.json(
         { error: 'WAKE_API_URL não configurada' },
@@ -37,10 +42,22 @@ export async function POST(request: NextRequest) {
     const baseUrl = REST_BASE_URL.endsWith('/') ? REST_BASE_URL.slice(0, -1) : REST_BASE_URL
     const url = `${baseUrl}${path}`
 
+    console.log('REST Request:', {
+      url,
+      method,
+      tokenLength: API_TOKEN.length,
+      hasToken: API_TOKEN.length > 0,
+    })
+
     const response = await fetch(url, {
       method: method as string,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+    })
+
+    console.log('REST Response:', {
+      status: response.status,
+      ok: response.ok,
     })
 
     if (!response.ok) {
