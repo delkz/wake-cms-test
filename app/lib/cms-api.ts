@@ -11,6 +11,8 @@ export interface HotsiteContent {
   contentId: string
   content: string
   title: string
+  searchTerms: [string]
+  position: string
 }
 
 export interface HotsiteBanner {
@@ -111,17 +113,28 @@ async function requestRest<T>(
     }
   }
 
-  const response = await fetch(getRestApiUrl(), {
-    method: 'POST',
+  const request: RequestInit = {
+    method,
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
+  }
+
+  if (method !== 'GET' && body !== undefined) {
+    request.body = JSON.stringify({ path, method, body })
+  }
+
+  let restApiUrl = getRestApiUrl()
+
+  if (method === 'GET') {
+    const searchParams = new URLSearchParams({
       path,
       method,
-      body,
-    }),
-  })
+    })
+    restApiUrl = `${restApiUrl}?${searchParams.toString()}`
+  }
+
+  const response = await fetch(restApiUrl, request)
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: `Erro REST (${response.status})` }))
@@ -219,6 +232,28 @@ export const cmsApi = {
       url: ''
     }
   },
+  async updateContent(input: {
+    contentId: string
+    content: string
+    searchTerms: string[]
+    title: string
+    position: string
+  }): Promise<HotsiteContent> {
+    const { contentId, content, title, position } = input
+    const normalizedContent = content.replace(/\r?\n/g, '')
+
+    
+
+    return requestRest<HotsiteContent>(`/conteudos/${contentId}`, 'PUT', {
+      titulo: title,
+      ativo: true,
+      posicionamento: position,
+      conteudo: normalizedContent,
+      exibeTodasBuscas: false,
+      naoExibeBuscas: true,
+      exibeTodosHotsites: false
+    })
+  },
   async getContentById(contentId: string): Promise<HotsiteContent> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = await requestQl<any>(`
@@ -228,6 +263,8 @@ export const cmsApi = {
           contentId
           content
           title
+          searchTerms
+          position
         }
       }
     }
@@ -244,6 +281,8 @@ export const cmsApi = {
       contentId: String(data.contents.nodes[0].contentId),
       content: data.contents.nodes[0].content,
       title: data.contents.nodes[0].title,
+      searchTerms: data.contents.nodes[0].searchTerms ?? [''],
+      position: data.contents.nodes[0].position ?? '',
     }
   },
   async createHotsite(input: { name: string; slug: string }): Promise<Hotsite> {

@@ -64,16 +64,16 @@ import { LinkIcon } from "@/app/components/tiptap-icons/link-icon"
 import { useIsBreakpoint } from "@/app/hooks/use-is-breakpoint"
 import { useWindowSize } from "@/app/hooks/use-window-size"
 import { useCursorVisibility } from "@/app/hooks/use-cursor-visibility"
+import { useRefRect } from "@/app/hooks/use-element-rect"
 
 
 
 // --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import { useEditorHtmlStore } from "@/app/lib/editor-html-store"
 
 // --- Styles ---
 import "@/app/components/tiptap-templates/simple/simple-editor.scss"
-
-import content from "@/app/components/tiptap-templates/simple/data/content.json"
 
 const MainToolbarContent = ({
   onHighlighterClick,
@@ -203,9 +203,17 @@ export function SimpleEditor({initialContent}: { initialContent?: string }) {
     "main"
   )
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const setHtml = useEditorHtmlStore((state) => state.setHtml)
+  const toolbarRect = useRefRect(toolbarRef, {
+    throttleMs: 100,
+    useResizeObserver: true,
+  })
 
   const editor = useEditor({
     immediatelyRender: false,
+    onUpdate: ({ editor }) => {
+      setHtml(editor.getHTML())
+    },
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -244,16 +252,14 @@ export function SimpleEditor({initialContent}: { initialContent?: string }) {
     content: initialContent,
   })
 
+  useEffect(() => {
+    setHtml(initialContent ?? "")
+  }, [initialContent, setHtml])
+
   const rect = useCursorVisibility({
     editor,
-    overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
+    overlayHeight: toolbarRect.height,
   })
-
-  useEffect(() => {
-    if (!isMobile && mobileView !== "main") {
-      setMobileView("main")
-    }
-  }, [isMobile, mobileView])
 
   return (
     <div className="simple-editor-wrapper">

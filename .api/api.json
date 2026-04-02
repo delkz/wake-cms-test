@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "wakecommerce",
+      "source": "@wakecommerce/v1.0-readme#o71qmlhz4l1f",
+      "integrity": "sha512-U9ffG9pZtsbW+32cE/jbRlV6CnqICtXG/7RH5z0Tw3EoU5dejR0g+1VZgxONt+/eL/ohOTua/K8PBwaCt+MOrQ==",
+      "installerVersion": "6.1.3"
+    }
+  ]
+}
