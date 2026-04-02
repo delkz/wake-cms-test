@@ -1,3 +1,5 @@
+import { getContentByIdResponseSuccess, RestErrorResponse } from "../types/rest"
+
 export interface Hotsite {
   ativo: boolean
   hotsiteId: string
@@ -11,8 +13,12 @@ export interface HotsiteContent {
   contentId: string
   content: string
   title: string
-  searchTerms: [string]
+  searchTerms: string[] | string
   position: string
+  hotsiteId?: string | number[]
+  exibeTodasBuscas?: boolean,
+  naoExibeBuscas?: boolean,
+  exibeTodosHotsites?: boolean,
 }
 
 export interface HotsiteBanner {
@@ -232,16 +238,10 @@ export const cmsApi = {
       url: ''
     }
   },
-  async updateContent(input: {
-    contentId: string
-    content: string
-    searchTerms: string[]
-    title: string
-    position: string,
-    hotsiteId: string
-  }): Promise<HotsiteContent> {
-    const { contentId, content, title, position,hotsiteId } = input
-    const normalizedContent = content.replace(/\r?\n/g, '')
+  async updateContent(input: HotsiteContent): Promise<HotsiteContent> {
+    const { contentId, content, title, position, hotsiteId, searchTerms, exibeTodasBuscas, naoExibeBuscas, exibeTodosHotsites } = input
+
+    // console.log({ input })
 
     
 
@@ -249,42 +249,41 @@ export const cmsApi = {
       titulo: title,
       ativo: true,
       posicionamento: position,
-      conteudo: normalizedContent,
-      exibeTodasBuscas: false,
-      naoExibeBuscas: true,
-      exibeTodosHotsites: false,
-      hotsitesId: [hotsiteId],
+      conteudo: content,
+      exibeTodasBuscas: exibeTodasBuscas,
+      naoExibeBuscas: naoExibeBuscas,
+      exibeTodosHotsites: exibeTodosHotsites,
+      termosBusca: searchTerms,
+      hotsitesId: hotsiteId,
     })
+
   },
   async getContentById(contentId: string): Promise<HotsiteContent> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await requestQl<any>(`
-    query($contentId: [Long!]) {
-      contents(first: 1, contentIds: $contentId) {
-        nodes {
-          contentId
-          content
-          title
-          searchTerms
-          position
-        }
-      }
+
+    const data: getContentByIdResponseSuccess | RestErrorResponse = await requestRest(`/conteudos/${contentId}`, 'GET');
+    
+
+    function isRestErrorResponse(
+      value: getContentByIdResponseSuccess | RestErrorResponse,
+    ): value is RestErrorResponse {
+      return "mensagem" in value
     }
 
-
-    `, { contentId: [Number(contentId)] })
-    
-    if(!data || !data.contents?.nodes?.length) {
+    if(!data || isRestErrorResponse(data)) {
       throw new Error('Conteúdo não encontrado')
     }
-    console.log('GraphQL Content Data:', data) // Log para verificar os dados retornados
+    
 
     return {
-      contentId: String(data.contents.nodes[0].contentId),
-      content: data.contents.nodes[0].content,
-      title: data.contents.nodes[0].title,
-      searchTerms: data.contents.nodes[0].searchTerms ?? [''],
-      position: data.contents.nodes[0].position ?? '',
+      contentId: String(data.conteudoId),
+      content: data.codigoFonte,
+      title: data.titulo,
+      searchTerms: data.termoBusca,
+      position: data.posicionamento ?? '',
+      exibeTodasBuscas: data.exibeTodasBuscas,
+      naoExibeBuscas: data.naoExibeBuscas,
+      exibeTodosHotsites: data.exibeTodosHotsites,
+      hotsiteId: data.hotsitesId,
     }
   },
   async createHotsite(input: { name: string; slug: string }): Promise<Hotsite> {
