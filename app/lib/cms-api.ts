@@ -237,9 +237,10 @@ export const cmsApi = {
     content: string
     searchTerms: string[]
     title: string
-    position: string
+    position: string,
+    hotsiteId: string
   }): Promise<HotsiteContent> {
-    const { contentId, content, title, position } = input
+    const { contentId, content, title, position,hotsiteId } = input
     const normalizedContent = content.replace(/\r?\n/g, '')
 
     
@@ -251,7 +252,8 @@ export const cmsApi = {
       conteudo: normalizedContent,
       exibeTodasBuscas: false,
       naoExibeBuscas: true,
-      exibeTodosHotsites: false
+      exibeTodosHotsites: false,
+      hotsitesId: [hotsiteId],
     })
   },
   async getContentById(contentId: string): Promise<HotsiteContent> {
