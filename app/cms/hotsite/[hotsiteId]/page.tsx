@@ -1,5 +1,6 @@
 import { cmsApi } from "@/app/lib/cms-api"
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@/components/ui/button";
+
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,11 @@ export default async function Hotsite({
       <h1 className="display-title mb-3 text-4xl font-bold sm:text-5xl">
         Detalhes do Hotsite <span className="text-primary">{data.nome}</span>
       </h1>
-      <hr />
+     
+      <div className="flex">
+          <Button><Link href={`/cms/content/create?hotsiteId=${data.hotsiteId}`}>Novo Conteudo</Link></Button>
+      </div>
+       <hr />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div>
           <h2>Conteudos</h2>

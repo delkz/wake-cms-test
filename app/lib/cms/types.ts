@@ -17,6 +17,7 @@ export interface HotsiteContent {
   exibeTodasBuscas?: boolean
   naoExibeBuscas?: boolean
   exibeTodosHotsites?: boolean
+  active?: boolean
 }
 
 export interface HotsiteBanner {

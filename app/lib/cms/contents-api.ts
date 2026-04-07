@@ -32,6 +32,33 @@ export async function getContentById(contentId: string): Promise<HotsiteContent>
   }
 }
 
+export async function createContent(input: HotsiteContent): Promise<HotsiteContent> {
+  const {
+    content,
+    title,
+    position,
+    hotsiteId,
+    searchTerms,
+    exibeTodasBuscas,
+    naoExibeBuscas,
+    exibeTodosHotsites,
+    active
+  } = input
+
+  return requestRest<HotsiteContent>('/conteudos', 'POST', {
+    titulo: title,
+    ativo: active,
+    posicionamento: position || "Topo",
+    conteudo: content,
+    exibeTodasBuscas,
+    naoExibeBuscas,
+    exibeTodosHotsites,
+    termoBusca: searchTerms,
+    hotsitesId: hotsiteId,
+  })
+}
+
+
 export async function updateContent(input: HotsiteContent): Promise<HotsiteContent> {
   const {
     contentId,

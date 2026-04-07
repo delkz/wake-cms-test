@@ -4,6 +4,7 @@ import {
 import {
   getContentById,
   updateContent,
+  createContent
 } from "./cms/contents-api"
 import {
   createHotsite,
@@ -25,6 +26,7 @@ export const cmsApi = {
   listHotsites,
   getHotsiteById,
   updateContent,
+  createContent,
   getContentById,
   createHotsite,
   removeHotsite,

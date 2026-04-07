@@ -1,4 +1,5 @@
-import ListHotsites from "./components/listHotsites";
+import ListHotsites from "@/components/listHotsites";
+
 
 export default function Home() {
 
