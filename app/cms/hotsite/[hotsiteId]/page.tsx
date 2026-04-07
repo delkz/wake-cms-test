@@ -1,12 +1,13 @@
 import { cmsApi } from "@/app/lib/cms-api"
 import { Button } from "@/components/ui/button";
+import HotsiteContentList from "@/components/hotsite-content-list";
 
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic'
 
 export default async function Hotsite({
-  params
+  params,
 }: {
   params: Promise<{ hotsiteId: string }>
 }) {
@@ -26,17 +27,7 @@ export default async function Hotsite({
       </div>
        <hr />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div>
-          <h2>Conteudos</h2>
-          <div className="rounded-lg border border-(--chip-line) p-4 mb-4">
-            {data.conteudos.map((content) => (
-              <div key={content.contentId} className="mb-4">
-                <h3 className="text-xl font-semibold mb-1">{content.title}</h3>
-                <Button><Link href={`/cms/content/edit/${content.contentId}?hotsiteId=${data.hotsiteId}`}>Editar</Link></Button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <HotsiteContentList contents={data.conteudos} hotsiteId={data.hotsiteId} />
         <div>
           <h2>Banners</h2>
           <div className="rounded-lg border border-(--chip-line) p-4 mb-4">
