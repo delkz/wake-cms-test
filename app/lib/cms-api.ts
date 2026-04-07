@@ -8,16 +8,14 @@ import {
 } from "./cms/contents-api"
 import {
   createHotsite,
+  deleteHotsite,
   getHotsiteById,
+  insertHotsite,
   listHotsites,
   removeHotsite,
+  updateHotsite,
   updateHotsiteContents,
 } from "./cms/hotsites-api"
-import type {
-  Hotsite,
-  HotsiteBanner,
-  HotsiteContent,
-} from "./cms/types"
 import { replaceHotsiteUrlBinding } from "./cms/url-bindings-api"
 
 export type { Hotsite, HotsiteBanner, HotsiteContent } from "./cms/types"
@@ -29,7 +27,10 @@ export const cmsApi = {
   createContent,
   getContentById,
   createHotsite,
+  insertHotsite,
+  updateHotsite,
   removeHotsite,
+  deleteHotsite,
   updateHotsiteContents,
   updateHotsiteBanners,
   replaceHotsiteUrlBinding,

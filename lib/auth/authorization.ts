@@ -13,6 +13,18 @@ export function canCreateBanner(session: SessionPayload | null | undefined) {
   return hasPermission(session, PERMISSIONS.BANNER_CREATE);
 }
 
+export function canCreateHotsite(session: SessionPayload | null | undefined) {
+  return hasPermission(session, PERMISSIONS.HOTSITE_CREATE);
+}
+
+export function canUpdateHotsite(session: SessionPayload | null | undefined) {
+  return hasPermission(session, PERMISSIONS.HOTSITE_UPDATE);
+}
+
+export function canDeleteHotsite(session: SessionPayload | null | undefined) {
+  return hasPermission(session, PERMISSIONS.HOTSITE_DELETE);
+}
+
 export function canUpdateBanner(session: SessionPayload | null | undefined) {
   return hasPermission(session, PERMISSIONS.BANNER_UPDATE);
 }

@@ -1,9 +1,17 @@
 import { requestGraphql, requestRest } from "./http"
 import type { Hotsite, HotsiteBanner, HotsiteContent } from "./types"
 
+type HotsiteMutationInput = {
+  hotsiteId?: string
+  nome: string
+  url: string
+  ativo: boolean
+}
+
 type HotsiteGraphqlResponse = {
   hotsite?: {
     hotsiteId: string | number
+    url?: string
     name: string
     contents: HotsiteContent[]
     banners: HotsiteBanner[]
@@ -20,6 +28,7 @@ export async function getHotsiteById(hotsiteId: string): Promise<Hotsite> {
     query($hotsiteId: Long) {
       hotsite(hotsiteId: $hotsiteId) {
         hotsiteId
+        url
         name
         contents {
           contentId
@@ -49,7 +58,7 @@ export async function getHotsiteById(hotsiteId: string): Promise<Hotsite> {
     banners: data.hotsite.banners,
     conteudos: data.hotsite.contents,
     hotsiteId: String(data.hotsite.hotsiteId),
-    url: '',
+    url: data.hotsite.url ?? '',
   }
 }
 
@@ -62,6 +71,35 @@ export async function createHotsite(input: {
 
 export async function removeHotsite(hotsiteId: string): Promise<void> {
   return requestRest<void>(`/hotsites/${hotsiteId}`, 'DELETE')
+}
+
+export async function insertHotsite(input: HotsiteMutationInput): Promise<Hotsite> {
+  console.log("nao implementado")
+  return {
+    ativo: input.ativo,
+    banners: [],
+    conteudos: [],
+    hotsiteId: input.hotsiteId ?? "",
+    nome: input.nome,
+    url: input.url,
+  }
+}
+
+export async function updateHotsite(input: HotsiteMutationInput): Promise<Hotsite> {
+  console.log("nao implementado")
+  return {
+    ativo: input.ativo,
+    banners: [],
+    conteudos: [],
+    hotsiteId: input.hotsiteId ?? "",
+    nome: input.nome,
+    url: input.url,
+  }
+}
+
+export async function deleteHotsite(hotsiteId: string): Promise<void> {
+  console.log("nao implementado")
+  console.log(hotsiteId)
 }
 
 export async function updateHotsiteContents(
