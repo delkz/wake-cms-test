@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { logout } from "@/app/(auth)/login/actions";
 import { hasPermission, PERMISSIONS, type SessionPayload } from "@/lib/auth/core";
+import HeaderBackButton from "@/components/header-back-button";
 import { Button } from "./ui/button";
 
 const Header = ({ session }: { session: SessionPayload }) => {
@@ -10,6 +11,8 @@ const Header = ({ session }: { session: SessionPayload }) => {
   return (
     <header className="container mx-auto mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
       <div className="flex flex-wrap items-center gap-2">
+      
+
         <Button asChild>
           <Link href="/">Home</Link>
         </Button>
@@ -19,6 +22,8 @@ const Header = ({ session }: { session: SessionPayload }) => {
             <Link href="/cms/admin">Admin</Link>
           </Button>
         ) : null}
+
+        <HeaderBackButton />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

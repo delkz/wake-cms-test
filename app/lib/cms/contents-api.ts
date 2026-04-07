@@ -25,6 +25,9 @@ export async function getContentById(contentId: string): Promise<HotsiteContent>
     title: data.titulo,
     searchTerms: data.termoBusca,
     position: data.posicionamento ?? '',
+    active: data.ativo,
+    dataInicio: data.dataInicio ?? "",
+    dataFim: data.dataFim ?? "",
     exibeTodasBuscas: data.exibeTodasBuscas,
     naoExibeBuscas: data.naoExibeBuscas,
     exibeTodosHotsites: data.exibeTodosHotsites,
@@ -42,12 +45,16 @@ export async function createContent(input: HotsiteContent): Promise<HotsiteConte
     exibeTodasBuscas,
     naoExibeBuscas,
     exibeTodosHotsites,
-    active
+    active,
+    dataInicio,
+    dataFim,
   } = input
 
   return requestRest<HotsiteContent>('/conteudos', 'POST', {
     titulo: title,
     ativo: active,
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
     posicionamento: position || "Topo",
     conteudo: content,
     exibeTodasBuscas,
@@ -70,11 +77,16 @@ export async function updateContent(input: HotsiteContent): Promise<HotsiteConte
     exibeTodasBuscas,
     naoExibeBuscas,
     exibeTodosHotsites,
+    active,
+    dataInicio,
+    dataFim,
   } = input
 
   return requestRest<HotsiteContent>(`/conteudos/${contentId}`, 'PUT', {
     titulo: title,
-    ativo: true,
+    ativo: active ?? true,
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
     posicionamento: position,
     conteudo: content,
     exibeTodasBuscas,

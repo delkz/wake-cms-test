@@ -18,6 +18,8 @@ export interface HotsiteContent {
   naoExibeBuscas?: boolean
   exibeTodosHotsites?: boolean
   active?: boolean
+  dataInicio?: string
+  dataFim?: string
 }
 
 export interface HotsiteBanner {
