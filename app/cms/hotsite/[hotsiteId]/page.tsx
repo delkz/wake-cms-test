@@ -2,6 +2,7 @@ import { cmsApi } from "@/app/lib/cms-api"
 import { Button } from "@/app/components/ui/button";
 import Link from "next/link";
 
+export const dynamic = 'force-dynamic'
 
 export default async function Hotsite({
   params
@@ -11,7 +12,7 @@ export default async function Hotsite({
   const { hotsiteId } = await params;
   const data = await cmsApi.getHotsiteById(hotsiteId)
 
-  console.log({ data }) // Log para verificar os dados retornados
+  // console.log({ data }) // Log para verificar os dados retornados
 
   return (
     <main className="page-wrap px-4 py-12">

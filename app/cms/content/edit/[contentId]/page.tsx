@@ -2,6 +2,8 @@ import { SimpleEditor } from "@/app/components/tiptap-templates/simple/simple-ed
 import { cmsApi } from "@/app/lib/cms-api";
 import { SaveButton } from "../../../../components/save-button";
 
+export const dynamic = 'force-dynamic'
+
 export default async function Content({
     params
 }: {
@@ -11,7 +13,7 @@ export default async function Content({
 
     const data = await cmsApi.getContentById(contentId)
 
-    console.log({ data }) // Log para verificar os dados retornados
+    // console.log({ data }) // Log para verificar os dados retornados
 
     
     return (

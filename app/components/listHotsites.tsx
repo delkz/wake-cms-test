@@ -7,7 +7,7 @@ import Link from "next/link"
 
 const ListHotsites = () => {
 const { hotsites, isLoading, error, reload } = useHotsites()
-console.log('Hotsites:', hotsites) // Log para verificar os dados retornados
+// console.log('Hotsites:', hotsites) // Log para verificar os dados retornados
   return (
      <section className="island-shell rounded-2xl p-6 sm:p-8">
         <p className="island-kicker mb-2">Hotsites</p>
