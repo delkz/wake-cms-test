@@ -7,6 +7,9 @@ export const PERMISSIONS = {
   GLOBAL: "global",
   CONTENT_CREATE: "content:create",
   CONTENT_EDIT: "content:edit",
+  BANNER_CREATE: "banner:create",
+  BANNER_UPDATE: "banner:update",
+  BANNER_DELETE: "banner:delete",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

@@ -26,4 +26,5 @@ export interface HotsiteBanner {
   bannerId: string
   bannerName: string
   bannerUrl: string
+  position: string
 }

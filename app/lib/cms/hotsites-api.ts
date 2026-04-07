@@ -25,11 +25,13 @@ export async function getHotsiteById(hotsiteId: string): Promise<Hotsite> {
           contentId
           content
           title
+          position
         }
         banners {
           bannerId
           bannerName
           bannerUrl
+          position
         }
       }
     }

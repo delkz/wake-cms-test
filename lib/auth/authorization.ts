@@ -9,6 +9,18 @@ export function canEditContent(session: SessionPayload | null | undefined) {
   return hasPermission(session, PERMISSIONS.CONTENT_EDIT);
 }
 
+export function canCreateBanner(session: SessionPayload | null | undefined) {
+  return hasPermission(session, PERMISSIONS.BANNER_CREATE);
+}
+
+export function canUpdateBanner(session: SessionPayload | null | undefined) {
+  return hasPermission(session, PERMISSIONS.BANNER_UPDATE);
+}
+
+export function canDeleteBanner(session: SessionPayload | null | undefined) {
+  return hasPermission(session, PERMISSIONS.BANNER_DELETE);
+}
+
 export function inferPermissionFromRestRequest(
   method: string,
   path: string,
