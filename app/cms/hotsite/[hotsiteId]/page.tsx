@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import HotsiteContentList from "@/components/hotsite-content-list";
 
 import Link from "next/link";
+import { canCreateContent, canEditContent } from "@/lib/auth/authorization";
+import { requireSession } from "@/lib/auth/session";
 
 export const dynamic = 'force-dynamic'
 
@@ -11,23 +13,34 @@ export default async function Hotsite({
 }: {
   params: Promise<{ hotsiteId: string }>
 }) {
+  const session = await requireSession();
   const { hotsiteId } = await params;
   const data = await cmsApi.getHotsiteById(hotsiteId)
-
-  // console.log({ data }) // Log para verificar os dados retornados
+  const userCanCreateContent = canCreateContent(session);
+  const userCanEditContent = canEditContent(session);
 
   return (
-    <main className="page-wrap px-4 py-12">
+    <main className="">
       <h1 className="display-title mb-3 text-4xl font-bold sm:text-5xl">
         Detalhes do Hotsite <span className="text-primary">{data.nome}</span>
       </h1>
      
       <div className="flex">
-          <Button><Link href={`/cms/content/create?hotsiteId=${data.hotsiteId}`}>Novo Conteudo</Link></Button>
+        {userCanCreateContent ? (
+          <Button asChild>
+            <Link href={`/cms/content/create?hotsiteId=${data.hotsiteId}`}>Novo Conteudo</Link>
+          </Button>
+        ) : (
+          <></>
+        )}
       </div>
        <hr />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <HotsiteContentList contents={data.conteudos} hotsiteId={data.hotsiteId} />
+        <HotsiteContentList
+          contents={data.conteudos}
+          hotsiteId={data.hotsiteId}
+          canEdit={userCanEditContent}
+        />
         <div>
           <h2>Banners</h2>
           <div className="rounded-lg border border-(--chip-line) p-4 mb-4">

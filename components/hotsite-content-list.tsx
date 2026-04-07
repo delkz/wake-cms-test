@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input"
 type HotsiteContentListProps = {
   contents: HotsiteContent[]
   hotsiteId: string
+  canEdit: boolean
 }
 
-export default function HotsiteContentList({ contents, hotsiteId }: HotsiteContentListProps) {
+export default function HotsiteContentList({ contents, hotsiteId, canEdit }: HotsiteContentListProps) {
   const [search, setSearch] = useState("")
 
   const filteredContents = useMemo(() => {
@@ -50,9 +51,13 @@ export default function HotsiteContentList({ contents, hotsiteId }: HotsiteConte
         {filteredContents.map((content) => (
           <div key={content.contentId} className="rounded-lg border border-primary-foreground hover:border-primary p-4">
             <h3 className="text-xl font-semibold mb-1">{content.title}</h3>
-            <Button>
-              <Link href={`/cms/content/edit/${content.contentId}?hotsiteId=${hotsiteId}`}>Editar</Link>
-            </Button>
+            {canEdit ? (
+              <Button asChild>
+                <Link href={`/cms/content/edit/${content.contentId}?hotsiteId=${hotsiteId}`}>Editar</Link>
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">Sem permissão para editar este conteúdo.</p>
+            )}
           </div>
         ))}
         {filteredContents.length === 0 ? (

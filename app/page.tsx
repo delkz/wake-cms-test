@@ -1,10 +1,12 @@
 import ListHotsites from "@/components/listHotsites";
+import { requireSession } from "@/lib/auth/session";
 
 
-export default function Home() {
+export default async function Home() {
+  await requireSession();
 
   return (
-    <main className="page-wrap px-4 py-12">
+    <main className="">
       <ListHotsites></ListHotsites>
     </main>
   )

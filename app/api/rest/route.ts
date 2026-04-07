@@ -1,249 +1,180 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
+
+import { inferPermissionFromRestRequest } from "@/lib/auth/authorization";
+import { decodeSessionToken, hasPermission, SESSION_COOKIE_NAME } from "@/lib/auth/core";
+
+function getSessionFromRequest(request: NextRequest) {
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  return decodeSessionToken(token);
+}
+
+function ensureAuthorized(request: NextRequest, method: string, path: string) {
+  const session = getSessionFromRequest(request);
+
+  if (!session) {
+    return NextResponse.json({ error: "Nao autenticado" }, { status: 401 });
+  }
+
+  const requiredPermission = inferPermissionFromRestRequest(method, path);
+
+  if (requiredPermission && !hasPermission(session, requiredPermission)) {
+    return NextResponse.json(
+      { error: "Sem permissao para executar esta acao" },
+      { status: 403 },
+    );
+  }
+
+  return null;
+}
+
+function getRestConfig() {
+  const baseUrl = (process.env.WAKE_API_URL ?? "").trim();
+  const apiToken = (process.env.WAKE_API_TOKEN ?? "").trim();
+
+  if (!baseUrl) {
+    return {
+      error: NextResponse.json({ error: "WAKE_API_URL nao configurada" }, { status: 500 }),
+    };
+  }
+
+  if (!apiToken) {
+    return {
+      error: NextResponse.json({ error: "WAKE_API_TOKEN nao configurada" }, { status: 500 }),
+    };
+  }
+
+  return {
+    baseUrl: baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl,
+    apiToken,
+    error: null,
+  };
+}
+
+async function forwardRequest({
+  apiToken,
+  baseUrl,
+  path,
+  method,
+  body,
+}: {
+  apiToken: string;
+  baseUrl: string;
+  path: string;
+  method: string;
+  body?: unknown;
+}) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Basic ${apiToken}`,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    return NextResponse.json({ error }, { status: response.status });
+  }
+
+  if (response.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  const data = await response.json();
+  return NextResponse.json(data, { status: response.status });
+}
 
 export async function PUT(request: NextRequest) {
   try {
-    const REST_BASE_URL = process.env.WAKE_API_URL ?? ''
-    const API_TOKEN = process.env.WAKE_API_TOKEN ?? ''
-
-    // console.log('REST DEBUG:', {
-    //   apiUrl: REST_BASE_URL ? '✓ Configurada' : '✗ Vazia',
-    //   token: API_TOKEN ? '✓ Configurada' : '✗ Vazia',
-    // })
-
-    if (!REST_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WAKE_API_URL não configurada' },
-        { status: 500 }
-      )
+    const config = getRestConfig();
+    if (config.error) {
+      return config.error;
     }
 
-    if (!API_TOKEN) {
-      return NextResponse.json(
-        { error: 'WAKE_API_TOKEN não configurada' },
-        { status: 500 }
-      )
-    }
-
-    const { path, method, body } = await request.json()
+    const { path, method, body } = await request.json();
 
     if (!path) {
-      return NextResponse.json(
-        { error: 'path é obrigatório' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "path e obrigatorio" }, { status: 400 });
     }
 
-    const headers: HeadersInit = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Basic ${API_TOKEN}`,
+    const authorizationError = ensureAuthorized(request, String(method), String(path));
+    if (authorizationError) {
+      return authorizationError;
     }
 
-    const baseUrl = REST_BASE_URL.endsWith('/') ? REST_BASE_URL.slice(0, -1) : REST_BASE_URL
-    const url = `${baseUrl}${path}`
-
-    console.log('REST Request:', {
-      url,
-      method,
+    return forwardRequest({
+      apiToken: config.apiToken,
+      baseUrl: config.baseUrl,
+      path: String(path),
+      method: String(method),
       body,
-    })
-
-    const response = await fetch(url, {
-      method: method as string,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    })
-
-    // console.log('REST Response:', {
-    //   status: response.status,
-    //   ok: response.ok,
-    // })
-
-    if (!response.ok) {
-      const error = await response.text()
-      return NextResponse.json(
-        { error },
-        { status: response.status }
-      )
-    }
-
-    if (response.status === 204) {
-      return new NextResponse(null, { status: 204 })
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data, { status: response.status })
+    });
   } catch (error) {
-    console.error('REST API Error:', error)
-    return NextResponse.json(
-      { error: 'Erro ao processar requisição' },
-      { status: 500 }
-    )
+    console.error("REST API Error:", error);
+    return NextResponse.json({ error: "Erro ao processar requisicao" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const REST_BASE_URL = process.env.WAKE_API_URL ?? ''
-    const API_TOKEN = process.env.WAKE_API_TOKEN ?? ''
-
-    // console.log('REST DEBUG:', {
-    //   apiUrl: REST_BASE_URL ? '✓ Configurada' : '✗ Vazia',
-    //   token: API_TOKEN ? '✓ Configurada' : '✗ Vazia',
-    // })
-
-    if (!REST_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WAKE_API_URL não configurada' },
-        { status: 500 }
-      )
+    const config = getRestConfig();
+    if (config.error) {
+      return config.error;
     }
 
-    if (!API_TOKEN) {
-      return NextResponse.json(
-        { error: 'WAKE_API_TOKEN não configurada' },
-        { status: 500 }
-      )
-    }
-
-    const { path, method = 'PUT', body } = await request.json()
+    const { path, method = "PUT", body } = await request.json();
 
     if (!path) {
-      return NextResponse.json(
-        { error: 'path é obrigatório' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "path e obrigatorio" }, { status: 400 });
     }
 
-    const headers: HeadersInit = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Basic ${API_TOKEN}`,
+    const authorizationError = ensureAuthorized(request, String(method), String(path));
+    if (authorizationError) {
+      return authorizationError;
     }
 
-    const baseUrl = REST_BASE_URL.endsWith('/') ? REST_BASE_URL.slice(0, -1) : REST_BASE_URL
-    const url = `${baseUrl}${path}`
-
-    // console.log('REST Request:', {
-    //   url,
-    //   method,
-    //   tokenLength: API_TOKEN.length,
-    //   hasToken: API_TOKEN.length > 0,
-    // })
-
-    const response = await fetch(url, {
-      method: method as string,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    })
-
-    // console.log('REST Response:', {
-    //   status: response.status,
-    //   ok: response.ok,
-    // })
-
-    if (!response.ok) {
-      const error = await response.text()
-      return NextResponse.json(
-        { error },
-        { status: response.status }
-      )
-    }
-
-    if (response.status === 204) {
-      return new NextResponse(null, { status: 204 })
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data, { status: response.status })
+    return forwardRequest({
+      apiToken: config.apiToken,
+      baseUrl: config.baseUrl,
+      path: String(path),
+      method: String(method),
+      body,
+    });
   } catch (error) {
-    console.error('REST API Error:', error)
-    return NextResponse.json(
-      { error: 'Erro ao processar requisição' },
-      { status: 500 }
-    )
+    console.error("REST API Error:", error);
+    return NextResponse.json({ error: "Erro ao processar requisicao" }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const REST_BASE_URL = process.env.WAKE_API_URL ?? ''
-    const API_TOKEN = process.env.WAKE_API_TOKEN ?? ''
-
-    // console.log('REST DEBUG:', {
-    //   apiUrl: REST_BASE_URL ? '✓ Configurada' : '✗ Vazia',
-    //   token: API_TOKEN ? '✓ Configurada' : '✗ Vazia',
-    // })
-
-    if (!REST_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WAKE_API_URL não configurada' },
-        { status: 500 }
-      )
+    const config = getRestConfig();
+    if (config.error) {
+      return config.error;
     }
 
-    if (!API_TOKEN) {
-      return NextResponse.json(
-        { error: 'WAKE_API_TOKEN não configurada' },
-        { status: 500 }
-      )
-    }
-
-    const path = request.nextUrl.searchParams.get('path')
-    const method = request.nextUrl.searchParams.get('method') ?? 'GET'
+    const path = request.nextUrl.searchParams.get("path");
+    const method = request.nextUrl.searchParams.get("method") ?? "GET";
 
     if (!path) {
-      return NextResponse.json(
-        { error: 'path é obrigatório' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "path e obrigatorio" }, { status: 400 });
     }
 
-    const headers: HeadersInit = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Basic ${API_TOKEN}`,
+    const authorizationError = ensureAuthorized(request, method, path);
+    if (authorizationError) {
+      return authorizationError;
     }
 
-    const baseUrl = REST_BASE_URL.endsWith('/') ? REST_BASE_URL.slice(0, -1) : REST_BASE_URL
-    const url = `${baseUrl}${path}`
-
-    // console.log('REST Request:', {
-    //   url,
-    //   method,
-    //   tokenLength: API_TOKEN.length,
-    //   hasToken: API_TOKEN.length > 0,
-    // })
-
-    const response = await fetch(url, {
-      method: method as string,
-      headers,
-    })
-
-    // console.log('REST Response:', {
-    //   status: response.status,
-    //   ok: response.ok,
-    // })
-
-    if (!response.ok) {
-      const error = await response.text()
-      return NextResponse.json(
-        { error },
-        { status: response.status }
-      )
-    }
-
-    if (response.status === 204) {
-      return new NextResponse(null, { status: 204 })
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data, { status: response.status })
+    return forwardRequest({
+      apiToken: config.apiToken,
+      baseUrl: config.baseUrl,
+      path,
+      method,
+    });
   } catch (error) {
-    console.error('REST API Error:', error)
-    return NextResponse.json(
-      { error: 'Erro ao processar requisição' },
-      { status: 500 }
-    )
+    console.error("REST API Error:", error);
+    return NextResponse.json({ error: "Erro ao processar requisicao" }, { status: 500 });
   }
 }
