@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { cmsApi, type Hotsite } from "@/app/lib/cms-api";
+import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +39,6 @@ export default function HotsiteSettingsForm({
   const [url, setUrl] = useState(hotsite.url);
   const [ativo, setAtivo] = useState(hotsite.ativo);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [statusMessage, setStatusMessage] = useState("");
 
   function validate() {
     const nextErrors: FormErrors = {};
@@ -56,7 +57,7 @@ export default function HotsiteSettingsForm({
 
   async function handleUpdate() {
     if (!validate()) {
-      setStatusMessage("Corrija os campos obrigatorios antes de continuar.");
+      toast.error("Corrija os campos obrigatorios antes de continuar.");
       return;
     }
 
@@ -67,15 +68,14 @@ export default function HotsiteSettingsForm({
       ativo,
     });
 
-    setStatusMessage("Atualizacao prevista na API, mas ainda nao implementada.");
+    toast.success("Atualizacao prevista na API, mas ainda nao implementada.");
   }
 
   async function handleDelete() {
     await cmsApi.deleteHotsite(hotsite.hotsiteId);
-    setStatusMessage("Exclusao prevista na API, mas ainda nao implementada.");
   }
 
-  console.log("HotsiteSettingsForm render", { nome, url, ativo, errors, statusMessage });
+  console.log("HotsiteSettingsForm render", { nome, url, ativo, errors });
 
   return (
     <details className="mb-6 rounded-xl border bg-background" open>
@@ -124,13 +124,18 @@ export default function HotsiteSettingsForm({
           ) : null}
 
           {canDelete ? (
-            <Button type="button" variant="destructive" onClick={handleDelete}>
-              Deletar hotsite
-            </Button>
+            <ConfirmActionButton
+              title="Deletar hotsite"
+              description="Tem certeza? Essa acao e irreversivel e pode afetar conteudos e vinculacoes do hotsite."
+              triggerLabel="Deletar hotsite"
+              confirmLabel="Sim, deletar"
+              variant="destructive"
+              successMessage="Exclusao prevista na API, mas ainda nao implementada."
+              errorMessage="Nao foi possivel deletar o hotsite."
+              onConfirm={handleDelete}
+            />
           ) : null}
         </div>
-
-        {statusMessage ? <p className="text-sm text-muted-foreground">{statusMessage}</p> : null}
       </div>
     </details>
   );

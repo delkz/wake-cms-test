@@ -17,7 +17,12 @@ export default function LoginForm() {
       <form action={action} className="grid gap-4 rounded-2xl border bg-white p-6 shadow-sm">
         <div className="grid gap-2">
           <Label htmlFor="username">Usuario</Label>
-          <Input id="username" name="username" placeholder="admin ou user" autoComplete="username" />
+          <Input
+            id="username"
+            name="username"
+            placeholder="admin, publisher ou editor"
+            autoComplete="username"
+          />
         </div>
 
         <div className="grid gap-2">
@@ -53,21 +58,35 @@ export default function LoginForm() {
             <input type="hidden" name="username" value="admin" />
             <input type="hidden" name="password" value="admin" />
             <p className="font-medium">Administrador</p>
-            <p className="text-sm text-muted-foreground">Acesso global a todas as opcoes.</p>
+            <p className="text-sm text-muted-foreground">
+              Gerencia usuarios, revisa permissoes e pode publicar qualquer conteudo.
+            </p>
             <Button type="submit" variant="outline" disabled={pending}>
               Entrar como admin
             </Button>
           </form>
 
           <form action={action} className="grid gap-2 rounded-xl border p-4">
-            <input type="hidden" name="username" value="user" />
-            <input type="hidden" name="password" value="user" />
-            <p className="font-medium">Editor</p>
+            <input type="hidden" name="username" value="publisher" />
+            <input type="hidden" name="password" value="publisher" />
+            <p className="font-medium">Publicador</p>
             <p className="text-sm text-muted-foreground">
-              Pode editar conteudos existentes, mas nao criar novos nem ver a area administrativa.
+              Pode editar, revisar aprovacoes pendentes e publicar na Wake.
             </p>
             <Button type="submit" variant="outline" disabled={pending}>
-              Entrar como user
+              Entrar como publicador
+            </Button>
+          </form>
+
+          <form action={action} className="grid gap-2 rounded-xl border p-4 md:col-span-2">
+            <input type="hidden" name="username" value="editor" />
+            <input type="hidden" name="password" value="editor" />
+            <p className="font-medium">Editor</p>
+            <p className="text-sm text-muted-foreground">
+              Pode criar ou editar conteudos e solicitar aprovacao, mas nao publica direto.
+            </p>
+            <Button type="submit" variant="outline" disabled={pending}>
+              Entrar como editor
             </Button>
           </form>
         </div>

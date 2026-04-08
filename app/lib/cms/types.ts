@@ -8,6 +8,7 @@ export interface Hotsite {
 }
 
 export interface HotsiteContent {
+  workflowId?: string
   contentId: string
   content: string
   title: string

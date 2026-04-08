@@ -57,8 +57,7 @@ export default function HotsiteContentList({ contents, hotsiteId, canEdit, canCr
         <h2 className="text-2xl font-bold">Conteudos</h2>
         {canCreate ? (
             <Button  type="button"
-            variant="outline"
-            disabled asChild>
+            variant="outline" asChild>
             <Link href={`/cms/content/create?hotsiteId=${hotsiteId}`}>Novo Conteudo</Link>
           </Button>
         ) : null}

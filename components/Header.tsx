@@ -1,12 +1,14 @@
 import Link from "next/link";
 
 import { logout } from "@/app/(auth)/login/actions";
-import { hasPermission, PERMISSIONS, type SessionPayload } from "@/lib/auth/core";
+import { canEditContent, canManageUsers, canPublishContent } from "@/lib/auth/authorization";
+import { type SessionPayload } from "@/lib/auth/core";
 import HeaderBackButton from "@/components/header-back-button";
 import { Button } from "./ui/button";
 
 const Header = ({ session }: { session: SessionPayload }) => {
-  const canAccessAdmin = hasPermission(session, PERMISSIONS.GLOBAL);
+  const canAccessAdmin = canManageUsers(session);
+  const canAccessApprovals = canEditContent(session) || canPublishContent(session);
 
   return (
     <header className="container mx-auto mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
@@ -23,6 +25,12 @@ const Header = ({ session }: { session: SessionPayload }) => {
           </Button>
         ) : null}
 
+        {canAccessApprovals ? (
+          <Button asChild variant="outline">
+            <Link href="/cms/approvals">Aprovacoes</Link>
+          </Button>
+        ) : null}
+
         <HeaderBackButton />
       </div>
 
@@ -30,6 +38,7 @@ const Header = ({ session }: { session: SessionPayload }) => {
         <div className="rounded-lg border px-3 py-2 text-sm">
           <span className="font-medium">{session.displayName}</span>
           <span className="text-muted-foreground"> ({session.username})</span>
+          <span className="text-muted-foreground"> | {session.role}</span>
         </div>
 
         <Button asChild variant="outline">

@@ -1,45 +1,45 @@
 import "server-only";
 
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+import type { PermissionKey, UserRole as PrismaUserRole } from "@prisma/client";
 
 import type { AuthenticatedUser, Permission, UserRole } from "@/lib/auth/core";
+import { prisma } from "@/lib/prisma";
 
-type StoredUser = {
-  username: string;
-  password: string;
-  displayName: string;
-  role: UserRole;
-  permissions: Permission[];
-};
-
-const USERS_FILE_PATH = path.join(process.cwd(), "data", "users.json");
-
-async function readUsersFile() {
-  const rawUsers = await readFile(USERS_FILE_PATH, "utf-8");
-  return JSON.parse(rawUsers) as StoredUser[];
+function toRole(role: PrismaUserRole): UserRole {
+  return role.toLowerCase() as UserRole;
 }
 
-function sanitizeUser(user: StoredUser): AuthenticatedUser {
+function toPermission(permission: PermissionKey): Permission {
+  return permission as Permission;
+}
+
+function sanitizeUser(user: {
+  username: string;
+  displayName: string;
+  role: PrismaUserRole;
+  permissionGrants: Array<{ permission: PermissionKey }>;
+}): AuthenticatedUser {
   return {
     username: user.username,
     displayName: user.displayName,
-    role: user.role,
-    permissions: user.permissions,
+    role: toRole(user.role),
+    permissions: user.permissionGrants.map((grant) => toPermission(grant.permission)),
   };
 }
 
 export async function authenticateUser(username: string, password: string) {
-  const users = await readUsersFile();
   const normalizedUsername = username.trim().toLowerCase();
 
-  const matchedUser = users.find(
-    (user) =>
-      user.username.trim().toLowerCase() === normalizedUsername &&
-      user.password === password,
-  );
+  const matchedUser = await prisma.user.findUnique({
+    where: { username: normalizedUsername },
+    include: {
+      permissionGrants: {
+        orderBy: { permission: "asc" },
+      },
+    },
+  });
 
-  if (!matchedUser) {
+  if (!matchedUser || matchedUser.password !== password) {
     return null;
   }
 
@@ -47,6 +47,38 @@ export async function authenticateUser(username: string, password: string) {
 }
 
 export async function listUsers() {
-  const users = await readUsersFile();
+  const users = await prisma.user.findMany({
+    include: {
+      permissionGrants: {
+        orderBy: { permission: "asc" },
+      },
+    },
+    orderBy: [{ role: "asc" }, { displayName: "asc" }],
+  });
+
   return users.map(sanitizeUser);
+}
+
+export async function updateUserAccess(input: {
+  username: string;
+  role: PrismaUserRole;
+  permissions: Permission[];
+}) {
+  return prisma.user.update({
+    where: {
+      username: input.username,
+    },
+    data: {
+      role: input.role,
+      permissionGrants: {
+        deleteMany: {},
+        create: input.permissions.map((permission) => ({
+          permission: permission as PermissionKey,
+        })),
+      },
+    },
+    include: {
+      permissionGrants: true,
+    },
+  });
 }

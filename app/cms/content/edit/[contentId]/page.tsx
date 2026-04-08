@@ -1,6 +1,7 @@
 
 import { cmsApi } from "@/app/lib/cms-api";
 import ContentEditorForm from "@/components/content-editor-form";
+import { canPublishContent } from "@/lib/auth/authorization";
 import { PERMISSIONS } from "@/lib/auth/core";
 import { requirePermission } from "@/lib/auth/session";
 
@@ -11,7 +12,7 @@ export default async function Content({
 }: {
     params: Promise<{ contentId: string }>
 }) {
-    await requirePermission(PERMISSIONS.CONTENT_EDIT);
+    const session = await requirePermission(PERMISSIONS.CONTENT_EDIT);
     const { contentId } = await params;
 
     const data = await cmsApi.getContentById(contentId)
@@ -31,7 +32,11 @@ export default async function Content({
                 </div>
             </div>
             <div className="container mx-auto">
-                <ContentEditorForm initialContent={data} type="update" />
+                <ContentEditorForm
+                    initialContent={data}
+                    type="update"
+                    canPublish={canPublishContent(session)}
+                />
             </div>
 
         </main>

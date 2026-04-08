@@ -9,6 +9,14 @@ export function canEditContent(session: SessionPayload | null | undefined) {
   return hasPermission(session, PERMISSIONS.CONTENT_EDIT);
 }
 
+export function canPublishContent(session: SessionPayload | null | undefined) {
+  return hasPermission(session, PERMISSIONS.CONTENT_PUBLISH);
+}
+
+export function canManageUsers(session: SessionPayload | null | undefined) {
+  return hasPermission(session, PERMISSIONS.USER_MANAGE);
+}
+
 export function canCreateBanner(session: SessionPayload | null | undefined) {
   return hasPermission(session, PERMISSIONS.BANNER_CREATE);
 }
@@ -38,11 +46,11 @@ export function inferPermissionFromRestRequest(
   path: string,
 ): Permission | null {
   if (method === "POST" && path === "/conteudos") {
-    return PERMISSIONS.CONTENT_CREATE;
+    return PERMISSIONS.CONTENT_PUBLISH;
   }
 
   if (method === "PUT" && path.startsWith("/conteudos/")) {
-    return PERMISSIONS.CONTENT_EDIT;
+    return PERMISSIONS.CONTENT_PUBLISH;
   }
 
   if (method !== "GET") {

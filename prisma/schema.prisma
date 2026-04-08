@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PRISMA_DB_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PUBLISHER
+  EDITOR
+}
+
+enum PermissionKey {
+  GLOBAL
+  USER_MANAGE
+  CONTENT_CREATE
+  CONTENT_EDIT
+  CONTENT_PUBLISH
+  HOTSITE_CREATE
+  HOTSITE_UPDATE
+  HOTSITE_DELETE
+  BANNER_CREATE
+  BANNER_UPDATE
+  BANNER_DELETE
+}
+
+enum WorkflowEntityType {
+  CONTENT
+  PAGE
+}
+
+enum WorkflowAction {
+  CREATE
+  UPDATE
+}
+
+enum WorkflowStatus {
+  PENDING_REVIEW
+  REJECTED
+  PUBLISHED
+}
+
+enum WorkflowHistoryEventType {
+  SAVED_FOR_REVIEW
+  UPDATED_REVIEW
+  REJECTED
+  PUBLISHED
+}
+
+model User {
+  id                     String                @id @default(cuid())
+  username               String                @unique
+  password               String
+  displayName            String
+  role                   UserRole
+  permissionGrants       UserPermission[]
+  createdWorkflowItems   WorkflowItem[]        @relation("WorkflowCreatedBy")
+  requestedWorkflowItems WorkflowItem[] @relation("WorkflowRequestedBy")
+  publishedWorkflowItems WorkflowItem[] @relation("WorkflowPublishedBy")
+  workflowHistoryEvents  WorkflowItemHistory[]
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+}
+
+model UserPermission {
+  id         String        @id @default(cuid())
+  userId      String
+  permission  PermissionKey
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permission])
+}
+
+model WorkflowItem {
+  id              String                @id @default(cuid())
+  entityType      WorkflowEntityType
+  action          WorkflowAction
+  status          WorkflowStatus
+  targetEntityId  String?
+  wakeEntityId    String?
+  title           String
+  payload         String
+  createdById     String
+  requestedById   String
+  publishedById   String?
+  requestedAt     DateTime              @default(now())
+  publishedAt     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  createdBy       User                  @relation("WorkflowCreatedBy", fields: [createdById], references: [id])
+  requestedBy     User                  @relation("WorkflowRequestedBy", fields: [requestedById], references: [id])
+  publishedBy     User?                 @relation("WorkflowPublishedBy", fields: [publishedById], references: [id])
+  historyEntries  WorkflowItemHistory[]
+
+  @@index([entityType, status])
+  @@index([targetEntityId, status])
+}
+
+model WorkflowItemHistory {
+  id             String                   @id @default(cuid())
+  workflowItemId String?
+  entityType     WorkflowEntityType
+  action         WorkflowAction
+  status         WorkflowStatus
+  eventType      WorkflowHistoryEventType
+  targetEntityId String?
+  wakeEntityId   String?
+  title          String
+  payload        String
+  actorId        String
+  retentionUntil DateTime
+  createdAt      DateTime                 @default(now())
+  workflowItem   WorkflowItem?            @relation(fields: [workflowItemId], references: [id], onDelete: SetNull)
+  actor          User                     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([workflowItemId, createdAt])
+  @@index([targetEntityId, createdAt])
+  @@index([retentionUntil])
+}

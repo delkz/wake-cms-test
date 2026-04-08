@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 type ContentEditorFormProps = {
   initialContent: HotsiteContent;
   type: "create" | "update";
+  canPublish: boolean;
 };
 
 function formatHotsitesId(value?: string | number[]) {
@@ -207,6 +208,7 @@ function ContentOptionsFields(props: FieldsProps) {
 export default function ContentEditorForm({
   initialContent,
   type,
+  canPublish,
 }: ContentEditorFormProps) {
   const [title, setTitle] = useState(initialContent.title ?? "");
   const [active, setActive] = useState(initialContent.active ?? true);
@@ -224,6 +226,7 @@ export default function ContentEditorForm({
   const isRequiredFieldsFilled = title.trim().length > 0 && posicionamento.trim().length > 0;
 
   const currentContent: HotsiteContent = {
+    workflowId: initialContent.workflowId,
     contentId: initialContent.contentId,
     content: initialContent.content,
     title,
@@ -282,7 +285,11 @@ export default function ContentEditorForm({
       </div>
 
       <div className="sticky bottom-2 left-0 z-50 flex w-fit justify-start rounded-lg bg-background p-4 shadow-lg">
-        <SaveButton currentContent={currentContent} type={type} disabled={!isRequiredFieldsFilled} />
+        <SaveButton
+          currentContent={currentContent}
+          disabled={!isRequiredFieldsFilled}
+          canPublish={canPublish}
+        />
       </div>
     </div>
   );

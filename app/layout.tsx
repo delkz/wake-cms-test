@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import Header from "@/components/Header";
+import { Toaster } from "@/components/ui/sonner";
 import { getSession } from "@/lib/auth/session";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
@@ -40,6 +41,7 @@ export default async function RootLayout({
       <div className="container mx-auto ">
         <div className="page-wrap px-4 py-12">{children}</div>
       </div>
+      <Toaster />
       </body>
     </html>
   );

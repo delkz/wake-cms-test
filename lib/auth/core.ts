@@ -4,20 +4,22 @@ export const SESSION_COOKIE_NAME = "wake-cms-session";
 export const SESSION_DURATION_MS = 1000 * 60 * 60 * 8;
 
 export const PERMISSIONS = {
-  GLOBAL: "global",
-  CONTENT_CREATE: "content:create",
-  CONTENT_EDIT: "content:edit",
-  HOTSITE_CREATE: "hotsite:create",
-  HOTSITE_UPDATE: "hotsite:update",
-  HOTSITE_DELETE: "hotsite:delete",
-  BANNER_CREATE: "banner:create",
-  BANNER_UPDATE: "banner:update",
-  BANNER_DELETE: "banner:delete",
+  GLOBAL: "GLOBAL",
+  USER_MANAGE: "USER_MANAGE",
+  CONTENT_CREATE: "CONTENT_CREATE",
+  CONTENT_EDIT: "CONTENT_EDIT",
+  CONTENT_PUBLISH: "CONTENT_PUBLISH",
+  HOTSITE_CREATE: "HOTSITE_CREATE",
+  HOTSITE_UPDATE: "HOTSITE_UPDATE",
+  HOTSITE_DELETE: "HOTSITE_DELETE",
+  BANNER_CREATE: "BANNER_CREATE",
+  BANNER_UPDATE: "BANNER_UPDATE",
+  BANNER_DELETE: "BANNER_DELETE",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
-export type UserRole = "admin" | "editor";
+export type UserRole = "admin" | "publisher" | "editor";
 
 export type AuthenticatedUser = {
   username: string;
@@ -99,4 +101,13 @@ export function hasPermission(
     user.permissions.includes(PERMISSIONS.GLOBAL) ||
     user.permissions.includes(permission)
   );
+}
+
+export const ALL_PERMISSIONS = Object.values(PERMISSIONS);
+
+export function formatPermissionLabel(permission: Permission) {
+  return permission
+    .toLowerCase()
+    .split("_")
+    .join(" ");
 }

@@ -2,10 +2,17 @@
 
 import ContentEditorForm from "@/components/content-editor-form";
 
-const NewContentForm = ({ initialHotsiteId = "" }: { initialHotsiteId?: string }) => {
+const NewContentForm = ({
+    initialHotsiteId = "",
+    canPublish,
+}: {
+    initialHotsiteId?: string
+    canPublish: boolean
+}) => {
     return (
         <ContentEditorForm
             type="create"
+            canPublish={canPublish}
             initialContent={{
                 contentId: "",
                 content: "",
