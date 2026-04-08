@@ -13,12 +13,44 @@ import {
   type Permission,
 } from "@/lib/auth/core";
 import type { AuthenticatedUser } from "@/lib/auth/core";
+import { prisma } from "@/lib/prisma";
+
+async function getCurrentUserFromDatabase(username: string): Promise<AuthenticatedUser | null> {
+  const user = await prisma.user.findUnique({
+    where: {
+      username,
+    },
+    include: {
+      permissionGrants: {
+        orderBy: {
+          permission: "asc",
+        },
+      },
+    },
+  });
+
+  if (!user || !user.isActive) {
+    return null;
+  }
+
+  return {
+    username: user.username,
+    displayName: user.displayName,
+    role: user.role.toLowerCase() as "admin" | "publisher" | "editor",
+    permissions: user.permissionGrants.map((grant) => grant.permission as Permission),
+  };
+}
 
 export async function getSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const decoded = decodeSessionToken(token);
 
-  return decodeSessionToken(token);
+  if (!decoded) {
+    return null;
+  }
+
+  return getCurrentUserFromDatabase(decoded.username);
 }
 
 export async function createSession(user: AuthenticatedUser) {

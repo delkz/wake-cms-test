@@ -31,6 +31,10 @@ const Header = ({ session }: { session: SessionPayload }) => {
           </Button>
         ) : null}
 
+        <Button asChild variant="outline">
+          <Link href="/cms/me">Meu usuario</Link>
+        </Button>
+
         <HeaderBackButton />
       </div>
 

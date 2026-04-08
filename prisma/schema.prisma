@@ -55,6 +55,7 @@ model User {
   username               String                @unique
   password               String
   displayName            String
+  isActive               Boolean               @default(true)
   role                   UserRole
   permissionGrants       UserPermission[]
   createdWorkflowItems   WorkflowItem[]        @relation("WorkflowCreatedBy")

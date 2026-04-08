@@ -13,17 +13,27 @@ function toPermission(permission: PermissionKey): Permission {
   return permission as Permission;
 }
 
-function sanitizeUser(user: {
+type UserWithPermissions = {
   username: string;
   displayName: string;
   role: PrismaUserRole;
+  isActive: boolean;
   permissionGrants: Array<{ permission: PermissionKey }>;
-}): AuthenticatedUser {
+};
+
+function sanitizeUser(user: UserWithPermissions): AuthenticatedUser {
   return {
     username: user.username,
     displayName: user.displayName,
     role: toRole(user.role),
     permissions: user.permissionGrants.map((grant) => toPermission(grant.permission)),
+  };
+}
+
+function sanitizeUserForAdmin(user: UserWithPermissions) {
+  return {
+    ...sanitizeUser(user),
+    isActive: user.isActive,
   };
 }
 
@@ -39,7 +49,7 @@ export async function authenticateUser(username: string, password: string) {
     },
   });
 
-  if (!matchedUser || matchedUser.password !== password) {
+  if (!matchedUser || !matchedUser.isActive || matchedUser.password !== password) {
     return null;
   }
 
@@ -53,14 +63,15 @@ export async function listUsers() {
         orderBy: { permission: "asc" },
       },
     },
-    orderBy: [{ role: "asc" }, { displayName: "asc" }],
+    orderBy: [{ isActive: "desc" }, { role: "asc" }, { displayName: "asc" }],
   });
 
-  return users.map(sanitizeUser);
+  return users.map(sanitizeUserForAdmin);
 }
 
 export async function updateUserAccess(input: {
   username: string;
+  displayName: string;
   role: PrismaUserRole;
   permissions: Permission[];
 }) {
@@ -69,6 +80,7 @@ export async function updateUserAccess(input: {
       username: input.username,
     },
     data: {
+      displayName: input.displayName,
       role: input.role,
       permissionGrants: {
         deleteMany: {},
@@ -79,6 +91,67 @@ export async function updateUserAccess(input: {
     },
     include: {
       permissionGrants: true,
+    },
+  });
+}
+
+export async function updateOwnDisplayName(input: {
+  username: string;
+  displayName: string;
+}) {
+  return prisma.user.update({
+    where: {
+      username: input.username,
+    },
+    data: {
+      displayName: input.displayName,
+    },
+    include: {
+      permissionGrants: {
+        orderBy: { permission: "asc" },
+      },
+    },
+  });
+}
+
+export async function createUser(input: {
+  username: string;
+  password: string;
+  displayName: string;
+  role: PrismaUserRole;
+  permissions: Permission[];
+}) {
+  return prisma.user.create({
+    data: {
+      username: input.username,
+      password: input.password,
+      displayName: input.displayName,
+      role: input.role,
+      isActive: true,
+      permissionGrants: {
+        create: input.permissions.map((permission) => ({
+          permission: permission as PermissionKey,
+        })),
+      },
+    },
+    include: {
+      permissionGrants: {
+        orderBy: { permission: "asc" },
+      },
+    },
+  });
+}
+
+export async function updateUserActiveStatus(input: {
+  username: string;
+  isActive: boolean;
+}) {
+  return prisma.user.update({
+    where: {
+      username: input.username,
+    },
+    data: {
+      isActive: input.isActive,
     },
   });
 }
