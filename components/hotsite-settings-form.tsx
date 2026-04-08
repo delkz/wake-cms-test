@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { submitHotsiteForReview } from "@/app/cms/hotsite/actions";
 import { cmsApi, type Hotsite } from "@/app/lib/cms-api";
 import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ type HotsiteSettingsFormProps = {
   hotsite: Hotsite;
   canUpdate: boolean;
   canDelete: boolean;
+  canPublish: boolean;
 };
 
 type FormErrors = {
@@ -34,6 +36,7 @@ export default function HotsiteSettingsForm({
   hotsite,
   canUpdate,
   canDelete,
+  canPublish,
 }: HotsiteSettingsFormProps) {
   const [nome, setNome] = useState(hotsite.nome);
   const [url, setUrl] = useState(hotsite.url);
@@ -47,35 +50,45 @@ export default function HotsiteSettingsForm({
       nextErrors.nome = "Informe o nome do hotsite.";
     }
 
-    if (url.trim() && !isValidUrl(url)) {
-      nextErrors.url = "Informe uma URL valida com http:// ou https://.";
-    }
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
 
-  async function handleUpdate() {
+  async function submitUpdate(publishDirectly = false) {
     if (!validate()) {
       toast.error("Corrija os campos obrigatorios antes de continuar.");
       return;
     }
 
-    await cmsApi.updateHotsite({
+    await submitHotsiteForReview({
+      workflowId: hotsite.workflowId,
       hotsiteId: hotsite.hotsiteId,
       nome,
       url,
       ativo,
+      banners: hotsite.banners,
+      conteudos: hotsite.conteudos,
+    }, {
+      publishDirectly,
     });
 
-    toast.success("Atualizacao prevista na API, mas ainda nao implementada.");
+    if (publishDirectly) {
+      toast.success("Hotsite publicado com sucesso.");
+      window.location.reload();
+      return;
+    }
+
+    toast.success("Alteracoes do hotsite enviadas para aprovacao.");
+    window.location.href = "/cms/approvals";
+  }
+
+  async function handleUpdate() {
+    await submitUpdate(false);
   }
 
   async function handleDelete() {
     await cmsApi.deleteHotsite(hotsite.hotsiteId);
   }
-
-  console.log("HotsiteSettingsForm render", { nome, url, ativo, errors });
 
   return (
     <details className="mb-6 rounded-xl border bg-background" open>
@@ -118,9 +131,25 @@ export default function HotsiteSettingsForm({
 
         <div className="flex flex-wrap gap-2">
           {canUpdate ? (
-            <Button type="button" onClick={handleUpdate}>
-              Atualizar hotsite
-            </Button>
+            <>
+              <Button type="button" onClick={handleUpdate}>
+                Salvar para aprovacao
+              </Button>
+
+              {canPublish ? (
+                <ConfirmActionButton
+                  title="Publicar hotsite"
+                  description="Tem certeza? Essa acao publica as alteracoes do hotsite imediatamente."
+                  triggerLabel="Publicar agora"
+                  confirmLabel="Sim, publicar"
+                  successMessage="Hotsite publicado com sucesso."
+                  errorMessage="Nao foi possivel publicar o hotsite."
+                  onConfirm={async () => {
+                    await submitUpdate(true);
+                  }}
+                />
+              ) : null}
+            </>
           ) : null}
 
           {canDelete ? (

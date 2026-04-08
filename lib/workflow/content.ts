@@ -11,7 +11,7 @@ import { randomUUID } from "node:crypto";
 
 import { cmsApi } from "@/app/lib/cms-api";
 import type { HotsiteContent } from "@/app/lib/cms/types";
-import { PERMISSIONS, hasPermission, type SessionPayload } from "@/lib/auth/core";
+import { PERMISSIONS, hasPermission, type AuthenticatedUser } from "@/lib/auth/core";
 import { canPublishContent } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 
@@ -39,6 +39,7 @@ type WorkflowContentRecord = WorkflowItemWithUsers & {
 type WorkflowHistoryLogRecord = {
   id: string;
   workflowItemId: string | null;
+  entityType: WorkflowEntityType;
   title: string;
   eventType: WorkflowHistoryEventTypeValue;
   status: WorkflowStatus;
@@ -196,7 +197,7 @@ async function findExistingWorkflowReview(workflowId?: string) {
 
 export async function submitContentWorkflow(
   content: HotsiteContent,
-  session: SessionPayload,
+  session: AuthenticatedUser,
   publishDirectly = false,
 ) {
   const actor = await findActor(session.username);
@@ -363,7 +364,7 @@ export async function getWorkflowItemForPublishing(workflowId: string): Promise<
   };
 }
 
-export async function getWorkflowItemForPreview(workflowId: string, session: SessionPayload) {
+export async function getWorkflowItemForPreview(workflowId: string, session: AuthenticatedUser) {
   const item = await getWorkflowItemForPublishing(workflowId);
 
   if (
@@ -377,7 +378,7 @@ export async function getWorkflowItemForPreview(workflowId: string, session: Ses
   return item;
 }
 
-export async function publishWorkflowItem(workflowId: string, session: SessionPayload) {
+export async function publishWorkflowItem(workflowId: string, session: AuthenticatedUser) {
   const actor = await findActor(session.username);
   const workflowItem = await getWorkflowItemForPublishing(workflowId);
 
@@ -422,7 +423,7 @@ export async function publishWorkflowItem(workflowId: string, session: SessionPa
   };
 }
 
-export async function rejectWorkflowItem(workflowId: string, session: SessionPayload) {
+export async function rejectWorkflowItem(workflowId: string, session: AuthenticatedUser) {
   const actor = await findActor(session.username);
   const workflowItem = await getWorkflowItemForPublishing(workflowId);
 
@@ -476,6 +477,7 @@ const listRecentWorkflowHistoryCached = unstable_cache(
     SELECT
       history."id" as "id",
       history."workflowItemId" as "workflowItemId",
+      history."entityType" as "entityType",
       history."title" as "title",
       history."eventType" as "eventType",
       history."status" as "status",
@@ -487,17 +489,17 @@ const listRecentWorkflowHistoryCached = unstable_cache(
     FROM "WorkflowItemHistory" history
     INNER JOIN "User" users
       ON users."id" = history."actorId"
-    WHERE history."entityType" = 'CONTENT'::"WorkflowEntityType"
+    WHERE history."entityType" IN ('CONTENT'::"WorkflowEntityType", 'HOTSITE'::"WorkflowEntityType")
     ORDER BY history."createdAt" DESC
     LIMIT ${limit}
   `;
 
     return rows;
   },
-  ["workflow-content-recent-history"],
+  ["workflow-recent-history"],
   {
     revalidate: 30,
-    tags: ["workflow-content-history"],
+    tags: ["workflow-history"],
   },
 );
 

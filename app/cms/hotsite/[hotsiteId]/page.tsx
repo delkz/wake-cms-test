@@ -10,29 +10,46 @@ import {
   canDeleteBanner,
   canDeleteHotsite,
   canEditContent,
+  canPublishContent,
   canUpdateHotsite,
   canUpdateBanner,
 } from "@/lib/auth/authorization";
 import { requireSession } from "@/lib/auth/session";
+import { getApprovalItemForPreview } from "@/lib/workflow/approvals";
 
 export const dynamic = 'force-dynamic'
 
 export default async function Hotsite({
   params,
+  searchParams,
 }: {
   params: Promise<{ hotsiteId: string }>
+  searchParams: Promise<{ workflowId?: string }>
 }) {
   const session = await requireSession();
   const { hotsiteId } = await params;
+  const { workflowId } = await searchParams;
   const data = await cmsApi.getHotsiteById(hotsiteId)
   const userCanCreateContent = canCreateContent(session);
   const userCanEditContent = canEditContent(session);
   const userCanCreateHotsite = canCreateHotsite(session);
   const userCanUpdateHotsite = canUpdateHotsite(session);
   const userCanDeleteHotsite = canDeleteHotsite(session);
+  const userCanPublish = canPublishContent(session);
   const userCanCreateBanner = canCreateBanner(session);
   const userCanUpdateBanner = canUpdateBanner(session);
   const userCanDeleteBanner = canDeleteBanner(session);
+
+  const pendingItem = workflowId ? await getApprovalItemForPreview(workflowId, session) : null;
+  const pendingHotsite =
+    pendingItem?.entityType === "HOTSITE" && pendingItem.hotsite?.hotsiteId === hotsiteId
+      ? {
+          ...pendingItem.hotsite,
+          workflowId: pendingItem.id,
+        }
+      : null;
+
+  const initialHotsite = pendingHotsite ?? data;
 
   return (
     <main className="page-wrap px-4 py-12">
@@ -42,9 +59,10 @@ export default async function Hotsite({
 
       {userCanCreateHotsite || userCanUpdateHotsite || userCanDeleteHotsite ? (
         <HotsiteSettingsForm
-          hotsite={data}
+          hotsite={initialHotsite}
           canUpdate={userCanUpdateHotsite}
           canDelete={userCanDeleteHotsite}
+          canPublish={userCanPublish}
         />
       ) : null}
 

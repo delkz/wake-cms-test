@@ -10,7 +10,7 @@ export function PublishApprovalButton({ workflowId }: { workflowId: string }) {
       description="Tem certeza? Essa acao e irreversivel e vai enviar esta versao para a Wake."
       triggerLabel="Publicar"
       confirmLabel="Sim, publicar"
-      successMessage="Conteudo publicado com sucesso."
+      successMessage="Aprovacao publicada com sucesso."
       errorMessage="Nao foi possivel publicar esta aprovacao."
       onConfirm={async () => {
         await publishPendingContent(workflowId);

@@ -1,43 +1,45 @@
 import { hasPermission, PERMISSIONS, type Permission } from "@/lib/auth/core";
-import type { SessionPayload } from "@/lib/auth/core";
+import type { AuthenticatedUser, SessionPayload } from "@/lib/auth/core";
 
-export function canCreateContent(session: SessionPayload | null | undefined) {
+type PermissionAwareSession = SessionPayload | AuthenticatedUser;
+
+export function canCreateContent(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.CONTENT_CREATE);
 }
 
-export function canEditContent(session: SessionPayload | null | undefined) {
+export function canEditContent(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.CONTENT_EDIT);
 }
 
-export function canPublishContent(session: SessionPayload | null | undefined) {
+export function canPublishContent(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.CONTENT_PUBLISH);
 }
 
-export function canManageUsers(session: SessionPayload | null | undefined) {
+export function canManageUsers(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.USER_MANAGE);
 }
 
-export function canCreateBanner(session: SessionPayload | null | undefined) {
+export function canCreateBanner(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.BANNER_CREATE);
 }
 
-export function canCreateHotsite(session: SessionPayload | null | undefined) {
+export function canCreateHotsite(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.HOTSITE_CREATE);
 }
 
-export function canUpdateHotsite(session: SessionPayload | null | undefined) {
+export function canUpdateHotsite(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.HOTSITE_UPDATE);
 }
 
-export function canDeleteHotsite(session: SessionPayload | null | undefined) {
+export function canDeleteHotsite(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.HOTSITE_DELETE);
 }
 
-export function canUpdateBanner(session: SessionPayload | null | undefined) {
+export function canUpdateBanner(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.BANNER_UPDATE);
 }
 
-export function canDeleteBanner(session: SessionPayload | null | undefined) {
+export function canDeleteBanner(session: PermissionAwareSession | null | undefined) {
   return hasPermission(session, PERMISSIONS.BANNER_DELETE);
 }
 

@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import ContentEditorForm from "@/components/content-editor-form";
 import { Button } from "@/components/ui/button";
 import { canPublishContent } from "@/lib/auth/authorization";
 import { requireSession } from "@/lib/auth/session";
-import { getWorkflowItemForPreview } from "@/lib/workflow/content";
+import { getApprovalItemForPreview } from "@/lib/workflow/approvals";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,19 @@ export default async function ApprovalEditPage({
 }) {
   const session = await requireSession();
   const { workflowId } = await params;
-  const workflowItem = await getWorkflowItemForPreview(workflowId, session);
+  const workflowItem = await getApprovalItemForPreview(workflowId, session);
+
+  if (workflowItem.entityType === "HOTSITE") {
+    if (!workflowItem.hotsite?.hotsiteId) {
+      throw new Error("Hotsite da revisao nao encontrado.");
+    }
+
+    redirect(`/cms/hotsite/${workflowItem.hotsite.hotsiteId}?workflowId=${workflowId}`);
+  }
+
+  if (!workflowItem.content) {
+    throw new Error("Conteudo da revisao nao encontrado.");
+  }
 
   return (
     <main className="space-y-6">

@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { canPublishContent } from "@/lib/auth/authorization";
 import { requireSession } from "@/lib/auth/session";
 import {
-  listWorkflowItemsForReview,
-  listRecentWorkflowHistory,
-  listWorkflowItemsForUser,
-} from "@/lib/workflow/content";
+  listApprovalItemsForReview,
+  listApprovalItemsForUser,
+} from "@/lib/workflow/approvals";
+import { listRecentWorkflowHistory } from "@/lib/workflow/content";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +56,18 @@ function formatHistoryEvent(eventType: string) {
   }
 }
 
+function formatEntityType(entityType: string) {
+  if (entityType === "CONTENT") {
+    return "conteudo";
+  }
+
+  if (entityType === "HOTSITE") {
+    return "hotsite";
+  }
+
+  return "entidade";
+}
+
 function formatHistoryTimestamp(value: Date) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -67,8 +79,8 @@ export default async function ApprovalsPage() {
   const session = await requireSession();
   const userCanPublish = canPublishContent(session);
   const [pendingApprovals, myRequests, recentHistory] = await Promise.all([
-    userCanPublish ? listWorkflowItemsForReview() : Promise.resolve([]),
-    listWorkflowItemsForUser(session.username),
+    userCanPublish ? listApprovalItemsForReview() : Promise.resolve([]),
+    listApprovalItemsForUser(session.username),
     listRecentWorkflowHistory(),
   ]);
 
@@ -77,11 +89,11 @@ export default async function ApprovalsPage() {
       <section className="island-shell rounded-2xl p-6 sm:p-8">
         <p className="island-kicker mb-2">Workflow</p>
         <h1 className="display-title mb-3 text-4xl font-bold sm:text-5xl">
-          Aprovacoes de conteudo
+          Aprovacoes de alteracoes
         </h1>
         <p className="text-muted-foreground">
-          O editor envia uma versao pendente para o banco. O publicador ou admin revisa e publica
-          na Wake somente quando aprovar.
+          Conteudos e hotsites passam por revisao. O publicador ou admin revisa e publica na Wake
+          somente quando aprovar.
         </p>
       </section>
 
@@ -109,8 +121,8 @@ export default async function ApprovalsPage() {
                       Solicitado por {item.requestedBy.displayName} ({item.requestedBy.username})
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Acao: {item.action.toLowerCase()} | Wake ID atual:{" "}
-                      {item.content.contentId || "novo conteudo"}
+                      Tipo: {item.entityType === "CONTENT" ? "conteudo" : "hotsite"} | Acao:{" "}
+                      {item.action.toLowerCase()} | Wake ID atual: {item.targetEntityId || "novo"}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -182,7 +194,7 @@ export default async function ApprovalsPage() {
         <div className="mb-4">
           <h2 className="text-2xl font-semibold">Ultimas alteracoes</h2>
           <p className="text-sm text-muted-foreground">
-            Log recente do workflow de conteudo, incluindo salvamentos, reprovacoes e publicacoes.
+            Log recente do workflow, incluindo salvamentos, reprovacoes e publicacoes.
           </p>
         </div>
 
@@ -198,7 +210,9 @@ export default async function ApprovalsPage() {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {entry.title} | {formatWorkflowStatus(entry.status)} |{" "}
-                  {entry.targetEntityId ? `Conteudo ${entry.targetEntityId}` : "Novo conteudo"}
+                  {entry.targetEntityId
+                    ? `${formatEntityType(entry.entityType)} ${entry.targetEntityId}`
+                    : `Novo ${formatEntityType(entry.entityType)}`}
                 </p>
               </div>
 

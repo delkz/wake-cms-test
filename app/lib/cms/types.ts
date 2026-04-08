@@ -1,4 +1,5 @@
 export interface Hotsite {
+  workflowId?: string
   ativo: boolean
   hotsiteId: string
   banners: HotsiteBanner[]
