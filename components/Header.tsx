@@ -1,11 +1,11 @@
 import Link from "next/link";
 
 import { canEditContent, canManageUsers, canPublishContent } from "@/lib/auth/authorization";
-import { type SessionPayload } from "@/lib/auth/core";
+import { type AuthenticatedUser } from "@/lib/auth/core";
 import HeaderBackButton from "@/components/header-back-button";
 import HeaderUserMenu from "@/components/header-user-menu";
 
-const Header = ({ session }: { session: SessionPayload }) => {
+const Header = ({ session }: { session: AuthenticatedUser }) => {
   const canAccessAdmin = canManageUsers(session);
   const canAccessApprovals = canEditContent(session) || canPublishContent(session);
 

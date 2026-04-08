@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeftRight, ChevronDown, LogOut, UserRound } from "lucide-react";
 
 import { logout } from "@/app/(auth)/login/actions";
-import { type SessionPayload } from "@/lib/auth/core";
+import { type AuthenticatedUser } from "@/lib/auth/core";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,7 +26,7 @@ function getInitials(value: string) {
 }
 
 type HeaderUserMenuProps = {
-  session: SessionPayload;
+  session: AuthenticatedUser;
 };
 
 export default function HeaderUserMenu({ session }: HeaderUserMenuProps) {
