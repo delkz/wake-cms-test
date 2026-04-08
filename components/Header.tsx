@@ -1,59 +1,61 @@
 import Link from "next/link";
 
-import { logout } from "@/app/(auth)/login/actions";
 import { canEditContent, canManageUsers, canPublishContent } from "@/lib/auth/authorization";
 import { type SessionPayload } from "@/lib/auth/core";
 import HeaderBackButton from "@/components/header-back-button";
-import { Button } from "./ui/button";
+import HeaderUserMenu from "@/components/header-user-menu";
 
 const Header = ({ session }: { session: SessionPayload }) => {
   const canAccessAdmin = canManageUsers(session);
   const canAccessApprovals = canEditContent(session) || canPublishContent(session);
 
   return (
-    <header className="container mx-auto mt-4 mb-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
-      <div className="flex flex-wrap items-center gap-2">
-      
+    <header className="container mx-auto mt-4 mb-8 rounded-md border bg-background/90 px-4 py-3 shadow-none backdrop-blur">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold tracking-tight transition hover:bg-muted"
+          >
+            <span className="flex size-8 items-center justify-center rounded bg-primary text-primary-foreground">
+              W
+            </span>
+            Wake CMS
+          </Link>
 
-        <Button asChild>
-          <Link href="/">Home</Link>
-        </Button>
+          <nav className="flex flex-wrap items-center gap-1 rounded-md bg-muted/20 p-1">
+            <Link
+              href="/"
+              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-background/70 hover:text-foreground"
+            >
+              Home
+            </Link>
 
-        {canAccessAdmin ? (
-          <Button asChild variant="outline">
-            <Link href="/cms/admin">Admin</Link>
-          </Button>
-        ) : null}
+            {canAccessAdmin ? (
+              <Link
+                href="/cms/admin"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-background/70 hover:text-foreground"
+              >
+                Admin
+              </Link>
+            ) : null}
 
-        {canAccessApprovals ? (
-          <Button asChild variant="outline">
-            <Link href="/cms/approvals">Aprovacoes</Link>
-          </Button>
-        ) : null}
+            {canAccessApprovals ? (
+              <Link
+                href="/cms/approvals"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-background/70 hover:text-foreground"
+              >
+                Aprovações
+              </Link>
+            ) : null}
 
-        <Button asChild variant="outline">
-          <Link href="/cms/me">Meu usuario</Link>
-        </Button>
-
-        <HeaderBackButton />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="rounded-lg border px-3 py-2 text-sm">
-          <span className="font-medium">{session.displayName}</span>
-          <span className="text-muted-foreground"> ({session.username})</span>
-          <span className="text-muted-foreground"> | {session.role}</span>
+            <div className="rounded-md px-3 py-2">
+              <HeaderBackButton />
+            </div>
+          </nav>
         </div>
 
-        <Button asChild variant="outline">
-          <Link href="/login?switch=1">Trocar usuario</Link>
-        </Button>
-
-        <form action={logout}>
-          <Button type="submit" variant="secondary">
-            Sair
-          </Button>
-        </form>
+        <HeaderUserMenu session={session} />
       </div>
     </header>
   );

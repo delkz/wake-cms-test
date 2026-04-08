@@ -8,6 +8,11 @@ type HotsiteMutationInput = {
   ativo: boolean
 }
 
+type ListHotsitesOptions = {
+  page?: number
+  quantityPerPage?: number
+}
+
 type HotsiteGraphqlResponse = {
   hotsite?: {
     hotsiteId: string | number
@@ -18,8 +23,17 @@ type HotsiteGraphqlResponse = {
   }
 }
 
-export async function listHotsites(): Promise<Hotsite[]> {
-  return requestRest<Hotsite[]>('/hotsites', 'GET')
+function buildHotsitesListPath(options: ListHotsitesOptions = {}): string {
+  const searchParams = new URLSearchParams()
+
+  searchParams.set('pagina', String(options.page ?? 1))
+  searchParams.set('quantidadePorPagina', String(options.quantityPerPage ?? 9))
+
+  return `/hotsites?${searchParams.toString()}`
+}
+
+export async function listHotsites(options: ListHotsitesOptions = {}): Promise<Hotsite[]> {
+  return requestRest<Hotsite[]>(buildHotsitesListPath(options), 'GET')
 }
 
 export async function getHotsiteById(hotsiteId: string): Promise<Hotsite> {

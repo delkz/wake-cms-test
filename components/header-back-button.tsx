@@ -36,7 +36,7 @@ export default function HeaderBackButton() {
   }
 
   return (
-    <Button type="button" variant="outline" onClick={handleBack}>
+    <Button type="button" variant="ghost" size="sm" onClick={handleBack}>
       Voltar
     </Button>
   );
