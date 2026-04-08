@@ -1,6 +1,19 @@
 import { PermissionKey, PrismaClient, UserRole } from "@prisma/client";
+import { pbkdf2Sync, randomBytes } from "node:crypto";
 
 const prisma = new PrismaClient();
+
+const PASSWORD_HASH_ALGORITHM = "pbkdf2";
+const PASSWORD_HASH_DIGEST = "sha256";
+const PASSWORD_HASH_ITERATIONS = 210000;
+const PASSWORD_HASH_KEY_LENGTH = 32;
+
+function hashPassword(password) {
+  const salt = randomBytes(16).toString("base64url");
+  const hash = pbkdf2Sync(password, salt, PASSWORD_HASH_ITERATIONS, PASSWORD_HASH_KEY_LENGTH, PASSWORD_HASH_DIGEST).toString("base64url");
+
+  return `${PASSWORD_HASH_ALGORITHM}$${PASSWORD_HASH_DIGEST}$${PASSWORD_HASH_ITERATIONS}$${salt}$${hash}`;
+}
 
 const users = [
   {
@@ -39,7 +52,7 @@ async function upsertUser({ permissions, ...user }) {
     where: { username: user.username },
     update: {
       displayName: user.displayName,
-      password: user.password,
+      password: hashPassword(user.password),
       role: user.role,
       permissionGrants: {
         deleteMany: {},
@@ -48,6 +61,7 @@ async function upsertUser({ permissions, ...user }) {
     },
     create: {
       ...user,
+      password: hashPassword(user.password),
       permissionGrants: {
         create: permissions.map((permission) => ({ permission })),
       },

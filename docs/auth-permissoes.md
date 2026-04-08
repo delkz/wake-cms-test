@@ -1,252 +1,233 @@
 # Autenticacao e Permissoes
 
-Este projeto usa um sistema simples de autenticacao com:
+Este projeto usa um sistema de login baseado em banco de dados, cookie de sessao assinado e verificacao de permissoes no servidor.
 
-- usuarios gravados em JSON
-- sessao em cookie HTTP-only
-- verificacao de permissao na UI e no servidor
+O foco e simples:
 
-Arquivos principais:
+- autenticar usuario por senha
+- criar uma sessao curta e assinada
+- bloquear rotas para quem nao esta logado
+- checar permissao tanto na UI quanto nas mutacoes do servidor
 
-- `data/users.json`: usuarios e permissoes
-- `lib/auth/core.ts`: tipos, permissoes e token de sessao
-- `lib/auth/users.ts`: leitura e autenticacao dos usuarios
-- `lib/auth/session.ts`: criacao/leitura/remocao da sessao
-- `lib/auth/authorization.ts`: regras auxiliares de autorizacao
-- `proxy.ts`: bloqueio de acesso para quem nao esta logado
-- `app/api/rest/route.ts`: protecao das mutacoes REST
-- `app/api/graphql/route.ts`: exige sessao para chamadas GraphQL
+## Arquivos principais
 
-## 1. Como criar um novo usuario
+- [lib/auth/core.ts](lib/auth/core.ts): tipos, permissoes, assinatura da sessao e hash de senha
+- [lib/auth/users.ts](lib/auth/users.ts): autenticacao, criacao e atualizacao de usuarios
+- [lib/auth/session.ts](lib/auth/session.ts): criacao, leitura e remoção da sessao
 
-Edite o arquivo `data/users.json` e adicione um novo objeto no array.
+Ver tambem:
 
-Exemplo:
+- [docs/fluxo-validacao-conteudos-hotsite-banners.md](docs/fluxo-validacao-conteudos-hotsite-banners.md): fluxo de validacao e manutencao de conteudos, hotsites e banners
+- [lib/auth/authorization.ts](lib/auth/authorization.ts): helpers de permissao e mapa das rotas REST
+- [app/(auth)/login/actions.ts](app/(auth)/login/actions.ts): fluxo de login e logout
+- [proxy.ts](proxy.ts): bloqueio inicial de rotas publicas e privadas
+- [prisma/schema.prisma](prisma/schema.prisma): modelo do usuario e permissões
+- [prisma/seed.mjs](prisma/seed.mjs): usuarios iniciais com senha hasheada
 
-```json
-{
-  "username": "marketing",
-  "password": "marketing123",
-  "displayName": "Time de Marketing",
-  "role": "editor",
-  "permissions": ["content:edit"]
-}
-```
+## 1. Fluxo de login
 
-Campos:
+O formulario de login chama a action server-side em [app/(auth)/login/actions.ts](app/(auth)/login/actions.ts).
 
-- `username`: login usado na tela de autenticacao
-- `password`: senha em texto puro para este prototipo
-- `displayName`: nome exibido no header e na area admin
-- `role`: perfil visual/logico do usuario
-- `permissions`: lista de permissoes liberadas
+Fluxo:
 
-Observacao:
+1. o usuario envia `username` e `password`
+2. `authenticateUser()` busca o usuario no banco
+3. a senha e validada
+4. se estiver correta, `createSession()` grava o cookie
+5. o usuario e redirecionado para `/`
 
-- hoje este projeto usa JSON apenas para demonstracao
-- em producao, o ideal e usar banco de dados e senha com hash
+O login nao confia na UI. Toda validacao acontece no servidor.
 
-## 2. Como criar uma nova permissao
+## 2. Como a senha funciona
 
-As permissoes vivem em `lib/auth/core.ts`.
+As senhas nao sao salvas em texto puro. O projeto usa PBKDF2 com salt, em [lib/auth/core.ts](lib/auth/core.ts).
 
-Exemplo atual:
+Formato salvo no banco:
 
-```ts
-export const PERMISSIONS = {
-  GLOBAL: "global",
-  CONTENT_CREATE: "content:create",
-  CONTENT_EDIT: "content:edit",
-} as const;
-```
+`pbkdf2$sha256$iteracoes$salt$hash`
 
-Para adicionar uma nova permissao, acrescente uma chave:
+Isso significa:
 
-```ts
-export const PERMISSIONS = {
-  GLOBAL: "global",
-  CONTENT_CREATE: "content:create",
-  CONTENT_EDIT: "content:edit",
-  BANNERS_MANAGE: "banners:manage",
-} as const;
-```
+- `pbkdf2`: algoritmo de derivacao
+- `sha256`: hash usado pelo PBKDF2
+- `iteracoes`: custo computacional
+- `salt`: valor aleatorio por usuario
+- `hash`: resultado final da senha
 
-Depois disso, voce ja pode usar `"banners:manage"` dentro de `data/users.json`.
+Na autenticacao, [lib/auth/users.ts](lib/auth/users.ts) valida o hash. Se encontrar um registro antigo em texto puro, ele aceita temporariamente e faz upgrade automatico para hash novo no primeiro login.
 
-Exemplo:
+## 3. Como a sessao funciona
 
-```json
-{
-  "username": "banner-admin",
-  "password": "123",
-  "displayName": "Banner Admin",
-  "role": "admin",
-  "permissions": ["banners:manage"]
-}
-```
+Quando o login e bem-sucedido, [lib/auth/session.ts](lib/auth/session.ts) cria um cookie chamado `wake-cms-session`.
 
-## 3. Como proteger uma pagina com permissao
+O token de sessao contem:
 
-Se a pagina inteira depende de uma permissao, use `requirePermission`.
+- `username`
+- `displayName`
+- `role`
+- `permissions`
+- `expiresAt`
 
-Exemplo:
+Esse payload e:
 
-```ts
-import { PERMISSIONS } from "@/lib/auth/core";
-import { requirePermission } from "@/lib/auth/session";
+- serializado como JSON
+- codificado em base64url
+- assinado com HMAC SHA-256
 
-export default async function MinhaPagina() {
-  await requirePermission(PERMISSIONS.CONTENT_EDIT);
+Importante:
 
-  return <main>...</main>;
-}
-```
+- o token nao e criptografado
+- ele pode ser lido por quem tiver acesso ao cookie
+- ele nao pode ser alterado sem invalidar a assinatura
 
-Se for uma area exclusiva de admin global, use:
+## 4. O segredo da sessao
 
-```ts
-await requirePermission(PERMISSIONS.GLOBAL);
-```
+A assinatura usa `AUTH_SECRET`, definido no ambiente.
 
-ou:
+Comportamento atual em [lib/auth/core.ts](lib/auth/core.ts):
 
-```ts
-await requireGlobalPermission();
-```
+- se `AUTH_SECRET` existir, ele e usado
+- em producao, a ausencia de `AUTH_SECRET` quebra a aplicacao
+- fora de producao, existe um fallback apenas para desenvolvimento
 
-## 4. Como esconder ou mostrar um botao na interface
+Na pratica, em ambiente real voce deve definir `AUTH_SECRET` no [arquivo de ambiente](.env) com um valor forte e aleatorio.
 
-Para refletir a permissao na UI, voce pode:
+## 5. Como a sessao e validada
 
-1. ler a sessao no server component
-2. verificar a permissao
-3. renderizar ou esconder o botao
+`getSession()` em [lib/auth/session.ts](lib/auth/session.ts) nao depende apenas do cookie.
 
-Exemplo baseado na pagina do hotsite:
+O fluxo e:
 
-```ts
-const session = await requireSession();
-const userCanCreateContent = canCreateContent(session);
+1. ler o cookie
+2. validar assinatura e expiracao
+3. consultar o usuario no banco de novo
+4. rejeitar a sessao se o usuario estiver inativo
 
-return userCanCreateContent ? <Button>...</Button> : <p>Sem acesso</p>;
-```
+Isso e importante porque permite revogar acesso desativando o usuario no banco.
 
-Se a permissao for nova e ainda nao existir helper pronto, voce pode:
+## 6. Protecao do cookie
 
-- usar `hasPermission(session, PERMISSIONS.SUA_PERMISSAO)` direto
-- ou criar um helper em `lib/auth/authorization.ts`
+O cookie e gravado com as seguintes protecoes em [lib/auth/session.ts](lib/auth/session.ts):
 
-Exemplo:
+- `httpOnly`: JavaScript no navegador nao le o cookie
+- `sameSite: "lax"`: ajuda a reduzir risco de CSRF
+- `secure` em producao: envia o cookie apenas via HTTPS
+- `path: "/"`: vale para o site inteiro
 
-```ts
-export function canManageBanners(session: SessionPayload | null | undefined) {
-  return hasPermission(session, PERMISSIONS.BANNERS_MANAGE);
-}
-```
+## 7. Bloqueio de rotas
 
-## 5. Como proteger chamadas de API
+O [proxy.ts](proxy.ts) age como primeira barreira.
 
-Nao basta esconder botao. O servidor tambem precisa validar.
+Ele faz duas coisas:
+
+1. redireciona para `/login` quando nao existe sessao e a rota nao e publica
+2. redireciona para `/` quando o usuario ja esta logado e tenta acessar o login
+
+Rotas publicas hoje:
+
+- `/login`
+
+Rotas de assets e Next internals sao liberadas automaticamente.
+
+## 8. Modelo de permissoes
+
+As permissoes ficam centralizadas em [lib/auth/core.ts](lib/auth/core.ts) como constantes.
+
+Exemplos atuais:
+
+- `GLOBAL`
+- `USER_MANAGE`
+- `CONTENT_CREATE`
+- `CONTENT_EDIT`
+- `CONTENT_PUBLISH`
+- `HOTSITE_CREATE`
+- `HOTSITE_UPDATE`
+- `HOTSITE_DELETE`
+- `BANNER_CREATE`
+- `BANNER_UPDATE`
+- `BANNER_DELETE`
+
+O usuario autenticado carrega uma lista de permissões, e `hasPermission()` verifica se ele tem a permissao pedida ou a permissao global.
+
+## 9. Helpers de autorizacao
+
+[lib/auth/authorization.ts](lib/auth/authorization.ts) oferece helpers para a UI e para regras de negocio.
+
+Exemplos:
+
+- `canCreateContent(session)`
+- `canEditContent(session)`
+- `canPublishContent(session)`
+- `canManageUsers(session)`
+- `canCreateBanner(session)`
+- `canCreateHotsite(session)`
+
+Esses helpers servem para esconder ou mostrar botoes e links conforme o perfil do usuario.
+
+## 10. Protecao de API
+
+Nao basta esconder botao na tela. O servidor tambem precisa validar.
 
 ### REST
 
-As regras REST estao em `lib/auth/authorization.ts`, na funcao:
+As mutacoes REST passam por `inferPermissionFromRestRequest(method, path)` em [lib/auth/authorization.ts](lib/auth/authorization.ts).
 
-```ts
-inferPermissionFromRestRequest(method, path)
-```
-
-Exemplo:
-
-```ts
-if (method === "PUT" && path.startsWith("/banners/")) {
-  return PERMISSIONS.BANNERS_MANAGE;
-}
-```
-
-Isso faz com que `app/api/rest/route.ts` negue a acao para usuarios sem permissao.
+Essa funcao decide qual permissao e necessaria para uma rota e permite que a camada de API bloqueie a acao se o usuario nao tiver acesso.
 
 ### GraphQL
 
-Hoje `app/api/graphql/route.ts` exige sessao valida.
+O endpoint [app/api/graphql/route.ts](app/api/graphql/route.ts) exige sessao valida para operar.
 
-Se voce quiser regras mais finas para GraphQL no futuro, pode:
+Se o projeto crescer, o proximo passo natural e mapear operacoes GraphQL para permissões especificas.
 
-- inspecionar `query`
-- identificar a operacao
-- bloquear por permissao antes do `fetch`
+## 11. Como criar ou alterar usuarios
 
-## 6. Como refletir a nova permissao no login
+Os usuarios vivem no banco, descrito em [prisma/schema.prisma](prisma/schema.prisma).
 
-Se a tela de login rapido mostrar descricoes dos perfis, atualize:
+Os pontos principais sao:
 
-- `app/(auth)/login/login-form.tsx`
+- `User.password` guarda o hash da senha
+- `User.isActive` controla se o usuario pode entrar
+- `UserPermission` guarda as permissoes do usuario
+
+O seed inicial em [prisma/seed.mjs](prisma/seed.mjs) ja grava senhas hashadas.
+
+## 12. UI e permissao
+
+A interface usa a sessao para decidir o que mostrar.
 
 Exemplo:
 
-- mudar o texto do usuario `user`
-- adicionar um novo card de acesso rapido para outro usuario
+- o header mostra menu e atalhos com base no usuario logado
+- telas administrativas podem esconder botoes se o usuario nao tiver a permissao
 
-## 7. Exemplo completo: liberar gestao de banners so para admin
+Isso melhora a experiencia, mas nao substitui validacao no servidor.
 
-### Passo 1
+## 13. O que e seguro e o que ainda e limitado
 
-Adicionar em `lib/auth/core.ts`:
+Hoje o sistema ja tem o basico correto para um app interno pequeno:
 
-```ts
-BANNERS_MANAGE: "banners:manage",
-```
+- senha com hash e salt
+- cookie de sessao assinado
+- cookie `httpOnly` e `secure` em producao
+- expiracao da sessao
+- revalidacao do usuario no banco
+- segredo obrigatorio em producao
 
-### Passo 2
+Limites atuais:
 
-Adicionar a permissao no `admin` em `data/users.json`:
+- o token de sessao nao e criptografado, apenas assinado
+- o fallback de `AUTH_SECRET` ainda existe fora de producao
+- nao ha rate limit de login ainda
 
-```json
-"permissions": ["global", "banners:manage"]
-```
+## 14. Como adicionar uma nova permissao
 
-Ou em outro usuario especifico:
+Se precisar criar um novo acesso, siga esta ordem:
 
-```json
-"permissions": ["banners:manage"]
-```
+1. adicionar a permissao em [lib/auth/core.ts](lib/auth/core.ts)
+2. conceder a permissao ao usuario no banco
+3. criar um helper em [lib/auth/authorization.ts](lib/auth/authorization.ts) se for usado na UI
+4. proteger a pagina com `requirePermission(...)` quando necessario
+5. mapear a permissao na API REST ou GraphQL se a acao for sensivel
 
-### Passo 3
-
-Criar helper em `lib/auth/authorization.ts`:
-
-```ts
-export function canManageBanners(session: SessionPayload | null | undefined) {
-  return hasPermission(session, PERMISSIONS.BANNERS_MANAGE);
-}
-```
-
-### Passo 4
-
-Na pagina, esconder ou mostrar o botao:
-
-```ts
-const canManage = canManageBanners(session);
-```
-
-### Passo 5
-
-Na API REST, mapear a rota:
-
-```ts
-if (method === "PUT" && path.startsWith("/banners/")) {
-  return PERMISSIONS.BANNERS_MANAGE;
-}
-```
-
-## 8. Resumo pratico
-
-Quando quiser adicionar um acesso novo, siga esta ordem:
-
-1. criar a permissao em `lib/auth/core.ts`
-2. dar essa permissao ao usuario em `data/users.json`
-3. proteger a pagina com `requirePermission(...)` se necessario
-4. esconder/mostrar botoes e links na UI
-5. proteger a API em `lib/auth/authorization.ts`
-
-Se fizer apenas o passo da UI, o acesso fica cosmetico. O seguro e sempre combinar UI + validacao no servidor.
+Se quiser, a UI pode esconder o botao, mas a validacao real deve ficar no servidor.

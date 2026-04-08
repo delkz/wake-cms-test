@@ -3,6 +3,7 @@ import "server-only";
 import type { PermissionKey, UserRole as PrismaUserRole } from "@prisma/client";
 
 import type { AuthenticatedUser, Permission, UserRole } from "@/lib/auth/core";
+import { hashPassword, verifyPassword } from "@/lib/auth/core";
 import { prisma } from "@/lib/prisma";
 
 function toRole(role: PrismaUserRole): UserRole {
@@ -49,8 +50,15 @@ export async function authenticateUser(username: string, password: string) {
     },
   });
 
-  if (!matchedUser || !matchedUser.isActive || matchedUser.password !== password) {
+  if (!matchedUser || !matchedUser.isActive || !verifyPassword(matchedUser.password, password)) {
     return null;
+  }
+
+  if (!matchedUser.password.startsWith("pbkdf2$") && matchedUser.password === password) {
+    await prisma.user.update({
+      where: { username: normalizedUsername },
+      data: { password: hashPassword(password) },
+    });
   }
 
   return sanitizeUser(matchedUser);
@@ -124,7 +132,7 @@ export async function createUser(input: {
   return prisma.user.create({
     data: {
       username: input.username,
-      password: input.password,
+      password: hashPassword(input.password),
       displayName: input.displayName,
       role: input.role,
       isActive: true,

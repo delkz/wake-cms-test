@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { inferPermissionFromRestRequest } from "@/lib/auth/authorization";
 import { decodeSessionToken, hasPermission, SESSION_COOKIE_NAME } from "@/lib/auth/core";
+import { isSameOriginRequest } from "@/lib/request-origin";
 
 function getSessionFromRequest(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -22,6 +23,14 @@ function ensureAuthorized(request: NextRequest, method: string, path: string) {
       { error: "Sem permissao para executar esta acao" },
       { status: 403 },
     );
+  }
+
+  return null;
+}
+
+function ensureSameOrigin(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "Origem da requisicao invalida" }, { status: 403 });
   }
 
   return null;
@@ -88,6 +97,11 @@ async function forwardRequest({
 
 export async function PUT(request: NextRequest) {
   try {
+    const originError = ensureSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
     const config = getRestConfig();
     if (config.error) {
       return config.error;
@@ -119,6 +133,11 @@ export async function PUT(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const originError = ensureSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
     const config = getRestConfig();
     if (config.error) {
       return config.error;
@@ -150,6 +169,11 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const originError = ensureSameOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
     const config = getRestConfig();
     if (config.error) {
       return config.error;

@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { decodeSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/core";
+import { isSameOriginRequest } from "@/lib/request-origin";
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ error: "Origem da requisicao invalida" }, { status: 403 });
+    }
+
     const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
     const session = decodeSessionToken(sessionToken);
 
