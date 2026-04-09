@@ -29,6 +29,14 @@ function formatSearchTerms(value: string[] | string) {
   return value || "Sem termos de busca";
 }
 
+function formatBannerImage(value?: { nome: string; formato: string } | null) {
+  if (!value) {
+    return "Imagem nao informada";
+  }
+
+  return `${value.nome} (${value.formato})`;
+}
+
 export default async function ApprovalPreviewPage({
   params,
 }: {
@@ -37,7 +45,7 @@ export default async function ApprovalPreviewPage({
   const session = await requireSession();
   const { workflowId } = await params;
   const workflowItem = await getApprovalItemForPreview(workflowId, session);
-  const { content, hotsite } = workflowItem;
+  const { content, hotsite, banner } = workflowItem;
   const userCanPublish = canPublishContent(session);
 
   return (
@@ -72,6 +80,11 @@ export default async function ApprovalPreviewPage({
                 <Link href={`/cms/hotsite/${hotsite.hotsiteId}`}>Ver publicado</Link>
               </Button>
             ) : null}
+            {workflowItem.entityType === "BANNER" && banner?.id ? (
+              <Button asChild variant="outline">
+                <Link href={`/cms/banner/edit/${banner.id}`}>Ver publicado</Link>
+              </Button>
+            ) : null}
             {userCanPublish && workflowItem.status === "PENDING_REVIEW" ? (
               <>
                 <RejectApprovalButton workflowId={workflowId} />
@@ -95,7 +108,9 @@ export default async function ApprovalPreviewPage({
             <p className="font-medium">
               {workflowItem.entityType === "CONTENT"
                 ? (content?.position || "Nao informado")
-                : "Nao aplicavel"}
+                : workflowItem.entityType === "BANNER"
+                  ? (banner?.detalhe?.posicionamentoId ?? "Nao informado")
+                  : "Nao aplicavel"}
             </p>
           </div>
           <div className="rounded-xl border p-4">
@@ -103,7 +118,9 @@ export default async function ApprovalPreviewPage({
             <p className="font-medium">
               {workflowItem.entityType === "CONTENT"
                 ? (content?.contentId || "Novo conteudo")
-                : (hotsite?.hotsiteId || "Novo hotsite")}
+                : workflowItem.entityType === "HOTSITE"
+                  ? (hotsite?.hotsiteId || "Novo hotsite")
+                  : (banner?.id ? String(banner.id) : "Novo banner")}
             </p>
           </div>
         </div>
@@ -122,7 +139,9 @@ export default async function ApprovalPreviewPage({
               <p>
                 {workflowItem.entityType === "CONTENT"
                   ? formatSearchTerms(content?.searchTerms || [])
-                  : "Nao aplicavel"}
+                  : workflowItem.entityType === "BANNER"
+                    ? (banner?.apresentacao?.termosBusca || "Nao informado")
+                    : "Nao aplicavel"}
               </p>
             </div>
             <div>
@@ -130,7 +149,9 @@ export default async function ApprovalPreviewPage({
               <p>
                 {workflowItem.entityType === "CONTENT"
                   ? formatHotsites(content?.hotsiteId)
-                  : (hotsite?.hotsiteId || "Nao informado")}
+                  : workflowItem.entityType === "BANNER"
+                    ? (banner?.apresentacao?.listaHotsites?.hotSites?.map((item) => item.hotSiteId).join(", ") || "Nao informado")
+                    : (hotsite?.hotsiteId || "Nao informado")}
               </p>
             </div>
             <div>
@@ -138,7 +159,9 @@ export default async function ApprovalPreviewPage({
               <p>
                 {workflowItem.entityType === "CONTENT"
                   ? (content?.active ? "Sim" : "Nao")
-                  : (hotsite?.ativo ? "Sim" : "Nao")}
+                  : workflowItem.entityType === "BANNER"
+                    ? (banner?.ativo ? "Sim" : "Nao")
+                    : (hotsite?.ativo ? "Sim" : "Nao")}
               </p>
             </div>
             <div>
@@ -146,7 +169,9 @@ export default async function ApprovalPreviewPage({
               <p>
                 {workflowItem.entityType === "CONTENT"
                   ? (content?.dataInicio || "Nao informada")
-                  : "Nao aplicavel"}
+                  : workflowItem.entityType === "BANNER"
+                    ? (banner?.dataInicio || "Nao informada")
+                    : "Nao aplicavel"}
               </p>
             </div>
             <div>
@@ -154,7 +179,9 @@ export default async function ApprovalPreviewPage({
               <p>
                 {workflowItem.entityType === "CONTENT"
                   ? (content?.dataFim || "Nao informada")
-                  : "Nao aplicavel"}
+                  : workflowItem.entityType === "BANNER"
+                    ? (banner?.dataFim || "Nao informada")
+                    : "Nao aplicavel"}
               </p>
             </div>
             {workflowItem.entityType === "HOTSITE" ? (
@@ -162,6 +189,22 @@ export default async function ApprovalPreviewPage({
                 <p className="text-muted-foreground">URL</p>
                 <p>{hotsite?.url || "Nao informada"}</p>
               </div>
+            ) : null}
+            {workflowItem.entityType === "BANNER" ? (
+              <>
+                <div>
+                  <p className="text-muted-foreground">URL principal</p>
+                  <p>{banner?.detalhe?.urlBanner || "Nao informada"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Imagem</p>
+                  <p>{formatBannerImage(banner?.detalhe?.imagemBanner ?? null)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Texto alternativo</p>
+                  <p>{banner?.detalhe?.textoAlternativo || "Nao informado"}</p>
+                </div>
+              </>
             ) : null}
           </div>
         </aside>
@@ -174,6 +217,23 @@ export default async function ApprovalPreviewPage({
                 className="prose max-w-none rounded-xl border bg-background p-6"
                 dangerouslySetInnerHTML={{ __html: content?.content || "<p>Sem conteudo.</p>" }}
               />
+            </>
+          ) : workflowItem.entityType === "BANNER" ? (
+            <>
+              <h2 className="mb-4 text-xl font-semibold">Dados do banner</h2>
+              <div className="grid gap-3 rounded-xl border bg-background p-6 text-sm">
+                <p>
+                  Nome: <strong>{banner?.nome || "Banner sem nome"}</strong>
+                </p>
+                <p>Posicionamento: {banner?.detalhe?.posicionamentoId ?? "Nao informado"}</p>
+                <p>URL principal: {banner?.detalhe?.urlBanner || "Nao informada"}</p>
+                <p>URL clique: {banner?.detalhe?.urlClique || "Nao informada"}</p>
+                <p>URL alternativa: {banner?.detalhe?.urlBannerAlternativo || "Nao informada"}</p>
+                <p>Title: {banner?.detalhe?.title || "Nao informado"}</p>
+                <p>Title alternativo: {banner?.detalhe?.titleAlternativo || "Nao informado"}</p>
+                <p>Imagem: {formatBannerImage(banner?.detalhe?.imagemBanner ?? null)}</p>
+                <p>Ordem de exibicao: {banner?.detalhe?.ordemExibicao ?? "Nao informada"}</p>
+              </div>
             </>
           ) : (
             <>

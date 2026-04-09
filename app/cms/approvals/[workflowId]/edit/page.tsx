@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { type BannerApiResponse } from "@/app/lib/cms/banners-api";
+import BannerEditorForm from "@/components/banner-editor-form";
 import ContentEditorForm from "@/components/content-editor-form";
 import { Button } from "@/components/ui/button";
 import { canPublishContent } from "@/lib/auth/authorization";
@@ -24,6 +26,38 @@ export default async function ApprovalEditPage({
     }
 
     redirect(`/cms/hotsite/${workflowItem.hotsite.hotsiteId}?workflowId=${workflowId}`);
+  }
+
+  if (workflowItem.entityType === "BANNER") {
+    return (
+      <main className="space-y-6">
+        <section className="rounded-2xl border p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm uppercase tracking-wide text-muted-foreground">
+                Revisao em edicao
+              </p>
+              <h1 className="text-3xl font-bold">{workflowItem.title}</h1>
+              <p className="text-sm text-muted-foreground">
+                Esta tela continua editando a versao salva no workflow de aprovacao.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button asChild variant="outline">
+                <Link href={`/cms/approvals/${workflowId}/preview`}>Voltar ao preview</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <BannerEditorForm
+          mode="update"
+          initialBannerDetails={workflowItem.banner as BannerApiResponse}
+          canPublish={canPublishContent(session)}
+        />
+      </main>
+    );
   }
 
   if (!workflowItem.content) {

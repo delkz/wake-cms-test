@@ -69,13 +69,15 @@ export default async function Hotsite({
       <hr />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <HotsiteContentList
-          contents={data.conteudos}
-          hotsiteId={data.hotsiteId}
+          contents={initialHotsite.conteudos}
+          hotsiteId={initialHotsite.hotsiteId}
           canEdit={userCanEditContent}
           canCreate={userCanCreateContent}
         />
         <HotsiteBannerList
-          banners={data.banners}
+          banners={initialHotsite.banners}
+          hotsiteId={initialHotsite.hotsiteId}
+          workflowId={workflowId}
           canCreate={userCanCreateBanner}
           canUpdate={userCanUpdateBanner}
           canDelete={userCanDeleteBanner}

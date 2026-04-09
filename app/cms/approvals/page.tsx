@@ -65,6 +65,10 @@ function formatEntityType(entityType: string) {
     return "hotsite";
   }
 
+  if (entityType === "BANNER") {
+    return "banner";
+  }
+
   return "entidade";
 }
 
@@ -121,7 +125,7 @@ export default async function ApprovalsPage() {
                       Solicitado por {item.requestedBy.displayName} ({item.requestedBy.username})
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Tipo: {item.entityType === "CONTENT" ? "conteudo" : "hotsite"} | Acao:{" "}
+                      Tipo: {item.entityType === "CONTENT" ? "conteudo" : item.entityType === "HOTSITE" ? "hotsite" : "banner"} | Acao:{" "}
                       {item.action.toLowerCase()} | Wake ID atual: {item.targetEntityId || "novo"}
                     </p>
                   </div>

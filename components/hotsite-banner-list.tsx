@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 import type { HotsiteBanner } from "@/app/lib/cms-api";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ import {
 
 type HotsiteBannerListProps = {
   banners: HotsiteBanner[];
+  hotsiteId: string;
+  workflowId?: string;
   canCreate: boolean;
   canUpdate: boolean;
   canDelete: boolean;
@@ -22,6 +25,8 @@ type HotsiteBannerListProps = {
 
 export default function HotsiteBannerList({
   banners,
+  hotsiteId,
+  workflowId,
   canCreate,
   canUpdate,
   canDelete,
@@ -60,20 +65,19 @@ export default function HotsiteBannerList({
     }));
   }
 
+  const baseQuery = workflowId
+    ? `hotsiteId=${encodeURIComponent(hotsiteId)}&workflowId=${encodeURIComponent(workflowId)}`
+    : `hotsiteId=${encodeURIComponent(hotsiteId)}`;
+
   return (
     <div>
       <div className="mt-4 mb-3 flex items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">Banners</h2>
-        {canCreate ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled
-            title="Criacao de banner ainda nao implementada."
-          >
-            Novo banner
+        {/* {canCreate ? (
+          <Button type="button" variant="outline" disabled={true} asChild>
+            <Link  href={`/cms/banner/create?${baseQuery}`}>Novo banner</Link>
           </Button>
-        ) : null}
+        ) : null} */}
       </div>
       <div className="mb-3 flex gap-2">
         <Input
@@ -83,7 +87,7 @@ export default function HotsiteBannerList({
           placeholder="Buscar banner por nome ou URL"
         />
         <Select value={positionFilter} onValueChange={setPositionFilter}>
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-55">
             <SelectValue placeholder="Filtrar por posicao" />
           </SelectTrigger>
           <SelectContent>
@@ -133,13 +137,10 @@ export default function HotsiteBannerList({
 
               <div className="mt-3 flex gap-2">
                 {canUpdate ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled
-                    title="Atualizacao de banner ainda nao implementada."
-                  >
-                    Atualizar
+                  <Button type="button" variant="outline" asChild>
+                    <Link href={`/cms/banner/edit/${banner.bannerId}?${baseQuery}`}>
+                      Atualizar
+                    </Link>
                   </Button>
                 ) : null}
                 {canDelete ? (

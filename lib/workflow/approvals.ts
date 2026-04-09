@@ -2,14 +2,20 @@ import "server-only";
 
 import { Prisma, WorkflowEntityType, WorkflowStatus } from "@prisma/client";
 
+import type { UploadBannerOptions } from "@/app/lib/cms/banners-api";
 import type { Hotsite } from "@/app/lib/cms/types";
 import type { HotsiteContent } from "@/app/lib/cms/types";
 import { hasPermission, PERMISSIONS, type AuthenticatedUser } from "@/lib/auth/core";
 import { prisma } from "@/lib/prisma";
 import { publishWorkflowItem, rejectWorkflowItem } from "@/lib/workflow/content";
 import { publishHotsiteWorkflowItem, rejectHotsiteWorkflowItem } from "@/lib/workflow/hotsite";
+import {
+  publishBannerWorkflowItem,
+  rejectBannerWorkflowItem,
+} from "@/lib/workflow/banner";
 
 const WORKFLOW_ENTITY_HOTSITE = "HOTSITE" as unknown as WorkflowEntityType;
+const WORKFLOW_ENTITY_BANNER = "BANNER" as unknown as WorkflowEntityType;
 
 type WorkflowItemWithUsers = Prisma.WorkflowItemGetPayload<{
   include: {
@@ -28,7 +34,7 @@ type WorkflowItemWithUsers = Prisma.WorkflowItemGetPayload<{
   };
 }>;
 
-export type ApprovalWorkflowEntity = "CONTENT" | "HOTSITE";
+export type ApprovalWorkflowEntity = "CONTENT" | "HOTSITE" | "BANNER";
 
 type ApprovalWorkflowItemBase = Omit<
   WorkflowItemWithUsers,
@@ -39,17 +45,27 @@ type ContentApprovalWorkflowItem = ApprovalWorkflowItemBase & {
   entityType: "CONTENT";
   content: HotsiteContent;
   hotsite: null;
+  banner: null;
 };
 
 type HotsiteApprovalWorkflowItem = ApprovalWorkflowItemBase & {
   entityType: "HOTSITE";
   content: null;
   hotsite: Hotsite;
+  banner: null;
+};
+
+type BannerApprovalWorkflowItem = ApprovalWorkflowItemBase & {
+  entityType: "BANNER";
+  content: null;
+  hotsite: null;
+  banner: UploadBannerOptions;
 };
 
 export type ApprovalWorkflowItem =
   | ContentApprovalWorkflowItem
-  | HotsiteApprovalWorkflowItem;
+  | HotsiteApprovalWorkflowItem
+  | BannerApprovalWorkflowItem;
 
 function parsePayload(item: WorkflowItemWithUsers): ApprovalWorkflowItem {
   const base: ApprovalWorkflowItemBase = {
@@ -76,6 +92,7 @@ function parsePayload(item: WorkflowItemWithUsers): ApprovalWorkflowItem {
       entityType: "CONTENT",
       content: JSON.parse(item.payload) as HotsiteContent,
       hotsite: null,
+      banner: null,
     };
   }
 
@@ -85,6 +102,17 @@ function parsePayload(item: WorkflowItemWithUsers): ApprovalWorkflowItem {
       entityType: "HOTSITE",
       content: null,
       hotsite: JSON.parse(item.payload) as Hotsite,
+      banner: null,
+    };
+  }
+
+  if (item.entityType === WORKFLOW_ENTITY_BANNER) {
+    return {
+      ...base,
+      entityType: "BANNER",
+      content: null,
+      hotsite: null,
+      banner: JSON.parse(item.payload) as UploadBannerOptions,
     };
   }
 
@@ -95,7 +123,7 @@ export async function listApprovalItemsForReview() {
   const items = await prisma.workflowItem.findMany({
     where: {
       entityType: {
-        in: [WorkflowEntityType.CONTENT, WORKFLOW_ENTITY_HOTSITE],
+        in: [WorkflowEntityType.CONTENT, WORKFLOW_ENTITY_HOTSITE, WORKFLOW_ENTITY_BANNER],
       },
       status: WorkflowStatus.PENDING_REVIEW,
     },
@@ -123,7 +151,7 @@ export async function listApprovalItemsForUser(username: string) {
   const items = await prisma.workflowItem.findMany({
     where: {
       entityType: {
-        in: [WorkflowEntityType.CONTENT, WORKFLOW_ENTITY_HOTSITE],
+        in: [WorkflowEntityType.CONTENT, WORKFLOW_ENTITY_HOTSITE, WORKFLOW_ENTITY_BANNER],
       },
       requestedBy: {
         username,
@@ -170,7 +198,12 @@ export async function getApprovalItemForPreview(workflowId: string, session: Aut
     },
   });
 
-  if (!item || (item.entityType !== WorkflowEntityType.CONTENT && item.entityType !== WORKFLOW_ENTITY_HOTSITE)) {
+  if (
+    !item ||
+    (item.entityType !== WorkflowEntityType.CONTENT &&
+      item.entityType !== WORKFLOW_ENTITY_HOTSITE &&
+      item.entityType !== WORKFLOW_ENTITY_BANNER)
+  ) {
     throw new Error("Solicitacao de aprovacao nao encontrada.");
   }
 
@@ -215,6 +248,14 @@ export async function publishApprovalWorkflowItem(workflowId: string, session: A
     };
   }
 
+  if (item.entityType === WORKFLOW_ENTITY_BANNER) {
+    const result = await publishBannerWorkflowItem(workflowId, session);
+    return {
+      entityType: "BANNER" as const,
+      wakeEntityId: result.wakeBannerId,
+    };
+  }
+
   throw new Error("Tipo de entidade de workflow nao suportado para publicacao.");
 }
 
@@ -238,6 +279,10 @@ export async function rejectApprovalWorkflowItem(workflowId: string, session: Au
 
   if (item.entityType === WORKFLOW_ENTITY_HOTSITE) {
     return rejectHotsiteWorkflowItem(workflowId, session);
+  }
+
+  if (item.entityType === WORKFLOW_ENTITY_BANNER) {
+    return rejectBannerWorkflowItem(workflowId, session);
   }
 
   throw new Error("Tipo de entidade de workflow nao suportado para reprovacao.");

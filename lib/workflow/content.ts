@@ -489,7 +489,7 @@ const listRecentWorkflowHistoryCached = unstable_cache(
     FROM "WorkflowItemHistory" history
     INNER JOIN "User" users
       ON users."id" = history."actorId"
-    WHERE history."entityType" IN ('CONTENT'::"WorkflowEntityType", 'HOTSITE'::"WorkflowEntityType")
+    WHERE history."entityType" IN ('CONTENT'::"WorkflowEntityType", 'HOTSITE'::"WorkflowEntityType", 'BANNER'::"WorkflowEntityType")
     ORDER BY history."createdAt" DESC
     LIMIT ${limit}
   `;

@@ -4,6 +4,12 @@ import { inferPermissionFromRestRequest } from "@/lib/auth/authorization";
 import { decodeSessionToken, hasPermission, SESSION_COOKIE_NAME } from "@/lib/auth/core";
 import { isSameOriginRequest } from "@/lib/request-origin";
 
+type WakeOperationError = {
+  resultadoOperacao?: boolean;
+  codigo?: number;
+  mensagem?: string;
+};
+
 function getSessionFromRequest(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   return decodeSessionToken(token);
@@ -59,6 +65,69 @@ function getRestConfig() {
   };
 }
 
+function parseJsonSafely(value: string) {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function extractWakeOperationError(rawErrorText: string): WakeOperationError | null {
+  const parsed = parseJsonSafely(rawErrorText);
+
+  if (!parsed) {
+    return null;
+  }
+
+  if (typeof parsed === "object" && parsed !== null) {
+    const candidate = parsed as Record<string, unknown>;
+
+    if (
+      typeof candidate.mensagem === "string" ||
+      typeof candidate.codigo === "number" ||
+      typeof candidate.resultadoOperacao === "boolean"
+    ) {
+      return {
+        mensagem: typeof candidate.mensagem === "string" ? candidate.mensagem : undefined,
+        codigo: typeof candidate.codigo === "number" ? candidate.codigo : undefined,
+        resultadoOperacao:
+          typeof candidate.resultadoOperacao === "boolean"
+            ? candidate.resultadoOperacao
+            : undefined,
+      };
+    }
+
+    if (typeof candidate.error === "string") {
+      const nested = parseJsonSafely(candidate.error);
+
+      if (nested && typeof nested === "object") {
+        const nestedCandidate = nested as Record<string, unknown>;
+
+        return {
+          mensagem:
+            typeof nestedCandidate.mensagem === "string" ? nestedCandidate.mensagem : undefined,
+          codigo: typeof nestedCandidate.codigo === "number" ? nestedCandidate.codigo : undefined,
+          resultadoOperacao:
+            typeof nestedCandidate.resultadoOperacao === "boolean"
+              ? nestedCandidate.resultadoOperacao
+              : undefined,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function mapWakeMessageToFriendlyMessage(message: string) {
+  if (message.includes("The type initializer for 'Gdip' threw an exception.")) {
+    return "Falha ao processar a imagem do banner na Wake API (GDI+). Verifique formato, dimensoes e se o arquivo nao esta corrompido.";
+  }
+
+  return message;
+}
+
 async function forwardRequest({
   apiToken,
   baseUrl,
@@ -83,8 +152,17 @@ async function forwardRequest({
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    return NextResponse.json({ error }, { status: response.status });
+    const rawErrorText = await response.text();
+    const wakeError = extractWakeOperationError(rawErrorText);
+    const message = wakeError?.mensagem?.trim() || rawErrorText || `Erro REST (${response.status})`;
+
+    return NextResponse.json(
+      {
+        error: mapWakeMessageToFriendlyMessage(message),
+        wakeError,
+      },
+      { status: response.status },
+    );
   }
 
   if (response.status === 204) {

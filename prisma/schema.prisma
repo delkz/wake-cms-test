@@ -30,6 +30,7 @@ enum PermissionKey {
 enum WorkflowEntityType {
   CONTENT
   HOTSITE
+  BANNER
   PAGE
 }
 
