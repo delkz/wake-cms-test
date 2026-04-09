@@ -117,24 +117,6 @@ function getFileFormat(file: File, dataUrl: string) {
   return normalizeImageFormat(extension);
 }
 
-function ensureFileNameWithFormat(fileName: string, format: string) {
-  const trimmedName = fileName.trim();
-  const normalizedFormat = format.toLowerCase();
-
-  if (!trimmedName) {
-    return `banner-image.${normalizedFormat}`;
-  }
-
-  const dotIndex = trimmedName.lastIndexOf(".");
-
-  if (dotIndex <= 0) {
-    return `${trimmedName}.${normalizedFormat}`;
-  }
-
-  const baseName = trimmedName.slice(0, dotIndex);
-  return `${baseName}.${normalizedFormat}`;
-}
-
 function createPreviewDataUrl(base64: string, format?: string) {
   const normalizedBase64 = base64.trim();
 
@@ -222,8 +204,8 @@ async function buildImagePayload(file: File): Promise<ImagePayload> {
     throw new Error("Formato de imagem nao suportado. Use apenas PNG, JPG ou JPEG.");
   }
 
-  const formatoParaApi = formato.toUpperCase();
-  const nomeParaApi = ensureFileNameWithFormat(file.name, formato);
+  const formatoParaApi = file.type.split("/")[1]?.toLowerCase().replace("jpeg", "jpg") ?? formato.toLowerCase();
+  const nomeParaApi = file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, "-");
   const { largura, altura } = await readImageDimensions(dataUrl);
 
   return {
@@ -246,7 +228,7 @@ export default function BannerEditorForm({
   const [positionId, setPositionId] = useState("");
 
   const [bannerName, setBannerName] = useState(initialBannerDetails?.nome ?? initialBanner?.bannerName ?? "");
-  const [dataInicio, setDataInicio] = useState(normalizeDateInput(initialBannerDetails?.dataInicio));
+  const [dataInicio, setDataInicio] = useState(normalizeDateInput(initialBannerDetails?.dataInicio || new Date().toISOString()));
   const [dataFim, setDataFim] = useState(normalizeDateInput(initialBannerDetails?.dataFim));
   const [ativo, setAtivo] = useState(initialBannerDetails?.ativo ?? true);
 
@@ -272,7 +254,7 @@ export default function BannerEditorForm({
     initialBannerDetails?.apresentacao?.exibirEmTodasBuscas ?? false,
   );
   const [naoExibirEmBuscas, setNaoExibirEmBuscas] = useState(
-    initialBannerDetails?.apresentacao?.naoExibirEmBuscas ?? false,
+    initialBannerDetails?.apresentacao?.naoExibirEmBuscas ?? true,
   );
   const [exibirEmTodasCategorias, setExibirEmTodasCategorias] = useState(
     initialBannerDetails?.apresentacao?.exibirEmTodasCategorias ?? false,
@@ -366,6 +348,9 @@ export default function BannerEditorForm({
   function validateFields() {
     const nextErrors: FormFieldErrors = {};
     const validationMessages: string[] = [];
+    const hasImageSource = Boolean(selectedFile) || Boolean(imagePreviewFromBase64.trim());
+    const useAllHotSites = exibirEmTodosHotSites;
+    const useAllPartners = exibirEmTodosParceiros;
 
     if (!bannerName.trim()) {
       nextErrors.bannerName = true;
@@ -379,7 +364,7 @@ export default function BannerEditorForm({
       nextErrors.positionId = true;
       validationMessages.push("Selecione um posicionamento para o banner.");
     }
-    if (!urlBanner.trim()) {
+    if (!urlBanner.trim() && !hasImageSource) {
       nextErrors.urlBanner = true;
       validationMessages.push("Informe a URL principal do banner.");
     }
@@ -394,15 +379,15 @@ export default function BannerEditorForm({
       validationMessages.push("Informe uma ordem de exibicao valida (numero inteiro maior ou igual a zero).");
     }
 
-    const hotsitesIdsParsed = parseIdsList(hotsitesIds);
-    if (hotsitesIdsParsed.length === 0) {
+    const hotsitesIdsParsed = useAllHotSites ? [] : parseIdsList(hotsitesIds);
+    if (!useAllHotSites && hotsitesIdsParsed.length === 0) {
       nextErrors.hotsitesIds = true;
       validationMessages.push("Informe ao menos um ID de hotsite valido.");
     }
 
-    const parceirosIdsParsed = parseIdsList(parceirosIds);
+    const parceirosIdsParsed = useAllPartners ? [] : parseIdsList(parceirosIds);
 
-    if (!selectedFile && !urlBanner.trim()) {
+    if (!hasImageSource && !urlBanner.trim()) {
       nextErrors.selectedFile = true;
       validationMessages.push("Selecione uma imagem para o banner ou informe a URL principal.");
     }
@@ -448,9 +433,9 @@ export default function BannerEditorForm({
       if (!urlBanner.trim() && selectedFile) {
         const uploadedImage = await buildImagePayload(selectedFile);
         detalhePayload.imagemBanner = {
-          nome: uploadedImage.nome,
+          nome: uploadedImage.nome.toLowerCase(),
           base64: uploadedImage.base64,
-          formato: uploadedImage.formato,
+          formato: uploadedImage.formato.toLowerCase(),
         };
         detalhePayload.largura = uploadedImage.largura;
         detalhePayload.altura = uploadedImage.altura;
@@ -494,7 +479,7 @@ export default function BannerEditorForm({
           window.location.href = `/cms/banner/edit/${result.wakeBannerId}`;
           return;
         }
-
+        console.log({result})
         window.location.reload();
         return;
       }
@@ -514,7 +499,7 @@ export default function BannerEditorForm({
   return (
     <div className="space-y-6 rounded-xl border p-4">
       <div className="grid gap-2">
-        <Label htmlFor="banner-nome">Nome do banner</Label>
+        <Label htmlFor="banner-nome">Nome do banner *</Label>
         <Input
           id="banner-nome"
           required
@@ -529,7 +514,7 @@ export default function BannerEditorForm({
 
       <div className="grid gap-2 md:grid-cols-3">
         <div className="grid gap-2">
-          <Label htmlFor="banner-data-inicio">Data de inicio</Label>
+          <Label htmlFor="banner-data-inicio">Data de inicio *</Label>
           <Input
             id="banner-data-inicio"
             type="date"
@@ -564,7 +549,7 @@ export default function BannerEditorForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="banner-posicao">Posicionamento</Label>
+        <Label htmlFor="banner-posicao">Posicionamento *</Label>
         <Select
           value={positionId}
           onValueChange={(value) => {
@@ -590,10 +575,10 @@ export default function BannerEditorForm({
 
       <div className="grid gap-2 md:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor="banner-url-principal">URL principal do banner</Label>
+          <Label htmlFor="banner-url-principal">URL principal do banner *</Label>
           <Input
             id="banner-url-principal"
-            required
+            required={!selectedFile && !imagePreviewFromBase64.trim()}
             className={cn(fieldErrors.urlBanner && "border-destructive focus-visible:ring-destructive/40")}
             value={urlBanner}
             onChange={(event) => {
@@ -690,7 +675,7 @@ export default function BannerEditorForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="banner-alt">Texto alternativo</Label>
+        <Label htmlFor="banner-alt">Texto alternativo *</Label>
         <Input
           id="banner-alt"
           required
@@ -754,10 +739,10 @@ export default function BannerEditorForm({
 
       <div className="grid gap-2 md:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor="banner-hotsites-ids">IDs dos hotsites</Label>
+          <Label htmlFor="banner-hotsites-ids">IDs dos hotsites *</Label>
           <Input
             id="banner-hotsites-ids"
-            required
+            required={!exibirEmTodosHotSites}
             className={cn(fieldErrors.hotsitesIds && "border-destructive focus-visible:ring-destructive/40")}
             value={hotsitesIds}
             onChange={(event) => {

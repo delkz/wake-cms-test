@@ -73,11 +73,11 @@ export default function HotsiteBannerList({
     <div>
       <div className="mt-4 mb-3 flex items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">Banners</h2>
-        {/* {canCreate ? (
-          <Button type="button" variant="outline" disabled={true} asChild>
+        {canCreate ? (
+          <Button type="button" variant="outline" asChild>
             <Link  href={`/cms/banner/create?${baseQuery}`}>Novo banner</Link>
           </Button>
-        ) : null} */}
+        ) : null}
       </div>
       <div className="mb-3 flex gap-2">
         <Input
